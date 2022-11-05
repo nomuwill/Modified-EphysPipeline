@@ -22,8 +22,8 @@ class MaxWellEphys():
         self.rec_length = ephys_data.length
         self.spike_times = ephys_data.train
         self.neuron_data = ephys_data.neuron_data[0]
-        print("Recording length: {} minutes".format(self.rec_length / 1000 / 60))
-        print("Number of neurons: ", len(self.spike_times))
+        # print("Recording length: {} minutes".format(self.rec_length / 1000 / 60))
+        # print("Number of neurons: ", len(self.spike_times))
 
         chn_pos = np.asarray(list(self.neuron_data.values()), dtype=object)[:, 1]
         chn_pos = np.concatenate(chn_pos).reshape(len(chn_pos), 2)
@@ -57,11 +57,21 @@ class MaxWellEphys():
         self.paired_dir_df = pd.DataFrame(data=paired_direction)
 
         ##----- Create raster -----##
-        raster = {"cluster_number": cluster_num,
-                  "spike_times": self.spike_times,
-                  "pos": list(chn_pos)}
-        print(raster)
-        self.raster_df = pd.DataFrame(data=raster)
+        # raster = {"cluster_number": cluster_num,
+        #           "spike_times": self.spike_times,
+        #           "pos": ['blue' * len(cluster_num)]}
+
+        raster = {"cluster_number": [],
+                  "spike_times": [],
+                  "pos": []}  # the pos is actually the color in the raster plot we can change
+        # it later to the actual position to have different colors base on the actual positions
+        raster = pd.DataFrame(data=raster)
+        # print(raster)
+        for i in range(len(cluster_num)):
+            for spike in self.spike_times[i]:
+                raster.loc[len(raster)] = [cluster_num[i], spike, 'blue']
+
+        self.raster_df = raster
 
     def plot_raster(self):
         """
@@ -79,6 +89,7 @@ class MaxWellEphys():
                 size=6,
             ),
             marker_symbol=raw_symbols[3 * 137 + 2],
+
         ))
 
         fig_raster.update_layout(autosize=False,
@@ -100,8 +111,6 @@ class MaxWellEphys():
 
         fig_map = px.scatter(self.chn_map_df, x="pos_x", y="pos_y", hover_name="cluster_number",
                              size="fire_rate", width=1100, height=600, title="Electrode Map")
-
-
 
         fig_map.update_traces(marker=dict(color=circle_colors))
 

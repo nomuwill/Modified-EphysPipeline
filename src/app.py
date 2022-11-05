@@ -7,6 +7,7 @@ from maxwellEphys import *
 
 # dash setting
 app = Dash(__name__)
+server = app.server
 colors = {'background': 'white',
           'borderline': 'black'}
 
@@ -21,11 +22,13 @@ path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/original/data/" \
        "Trace_20220518_12_53_35_chip11350.raw.h5"
 phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
            "Trace_20220518_12_53_35_chip11350_curated.zip"
-########## end ##########
-
 ephys_dash = MaxWellEphys(phy_path, fr_coef, sttc_delta, sttc_thr)
 fig_map, circle_colors = ephys_dash.plot_map()
 fig_raster = ephys_dash.plot_raster()
+print(ephys_dash.raster_df)
+########## end ##########
+
+
 
 
 
@@ -166,6 +169,9 @@ def drop_down(search_value):
 # fig, circle_colors, chn_map_df = electrode_map(Connectoid_0518)
 # fig2, df = raster_plot(Connectoid_0518)
 
+#
+#
+print("WE ARE HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
 # print(chn_map_df)
 # print(list(chn_map_df['fire_rate']))
 
@@ -218,11 +224,11 @@ def plot_elec(value, electrode_click, raster_click):
                                  ["pos"]] = 'black'
         fig_raster.update_traces(
             marker=dict(
-                color=ephys_dash.raster_df['Pos'],
+                color=ephys_dash.raster_df['pos'],
             )
         )
-        cluster_number = list(ephys_dash.chn_map_df['channel']).index(int(raster_number))
-        firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['channel'] ==
+        cluster_number = list(ephys_dash.chn_map_df['cluster_number']).index(int(raster_number))
+        firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
                                                 int(raster_number)]['fire_rate'].values[0]
         # print("here")
         # print(firing_rate)
@@ -236,17 +242,17 @@ def plot_elec(value, electrode_click, raster_click):
     if electrode_click and (button_id == 'electrode-map'):
         cluster_number = int(electrode_click['points'][0]['pointNumber'])
         circle_colors[cluster_number] = '#a3a7e4'
-        fig_raster.update_traces(
+        fig_map.update_traces(
             marker=dict(
                 color=circle_colors
             )
         )
 
         raster_number = electrode_click['points'][0]['hovertext']
-        firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['channel'] ==
+        firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
                                                 int(raster_number)]['fire_rate'].values[0]
         ephys_dash.raster_df.loc[ephys_dash.raster_df["cluster_number"] ==
-                                 str(raster_number), ["pos"]] = 'red'
+                                 int(raster_number), ["pos"]] = 'red'
 
         fig_raster.update_traces(
             marker=dict(
@@ -261,4 +267,4 @@ def plot_elec(value, electrode_click, raster_click):
 
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8050)  # include hot-reloading by default
+    app.run_server(debug=True, port=8050, host='0.0.0.0')  # include hot-reloading by default

@@ -107,7 +107,7 @@ class MaxWellEphys():
         """
         colors = {'background': 'white', 'borderline': 'black'}
         circle_colors = ['#000000'] * self.chn_map_df['pos_x'].size
-        circle_colors[-1] = '#a3a7e4'
+        # circle_colors[-1] = '#a3a7e4'
 
         fig_map = px.scatter(self.chn_map_df, x="pos_x", y="pos_y", hover_name="cluster_number",
                              size="fire_rate", width=1100, height=600, title="Electrode Map")

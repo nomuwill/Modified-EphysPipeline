@@ -20,17 +20,19 @@ fr_coef = 10
 # TODO: get the path from callback functions of dropdowns
 path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/original/data/" \
        "Trace_20220518_12_53_35_chip11350.raw.h5"
+main_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/"
 phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
            "Trace_20220518_12_53_35_chip11350_curated.zip"
 ephys_dash = MaxWellEphys(phy_path, fr_coef, sttc_delta, sttc_thr)
 fig_map, circle_colors = ephys_dash.plot_map()
 fig_raster = ephys_dash.plot_raster()
-print(ephys_dash.raster_df)
+initial_dropdown_values = wr.list_objects(main_path + 'derived/kilosort2/')
+subfolder_dropdown_disable = False
+fire_rate = ''
+callback_clicks = 0
+original_data = wr.list_objects(main_path + 'derived/kilosort2/')
+# print(ephys_dash.raster_df)
 ########## end ##########
-
-
-
-
 
 
 # ##----- Create delay pairs -----##
@@ -81,8 +83,8 @@ app.layout = html.Div([
     html.Div(children=[
         html.Div(children=[
             html.Label('Dataset (UUID)'),
-            dcc.Dropdown(options=['id_1', 'id_2', 'id_3'], value='id_1', id="drop_down"),
-            dcc.Dropdown(options=['id_1', 'id_2', 'id_3'], value='id_1', id="drop_down_subplot", disabled=True),
+            dcc.Dropdown(options=['id_1', 'id_2', 'id_3'], value=main_path, id="drop_down"),
+            dcc.Dropdown(options=initial_dropdown_values, value=phy_path, id="drop_down_subplot", disabled=False),
             html.Div(id='dd-output-container'),
             html.Br(),
             daq.BooleanSwitch(id='show_network',
@@ -162,6 +164,7 @@ def drop_down(search_value):
     uuids = wr.list_directories('s3://braingeneers/ephys/')
     return uuids
 
+
 # # These lines are needed when using local data
 # fs = 20  # ms as the unit
 # folder_dir = "data/example_phy_data_0518/"
@@ -171,7 +174,10 @@ def drop_down(search_value):
 
 #
 #
+
 print("WE ARE HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
+
+
 # print(chn_map_df)
 # print(list(chn_map_df['fire_rate']))
 
@@ -184,39 +190,46 @@ print("WE ARE HEREEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE")
     Input('drop_down', 'value'),
     Input('electrode-map', 'clickData'),
     Input('raster_plot', 'clickData'),
+    Input('drop_down_subplot', 'value'),
 )
-
-def plot_elec(value, electrode_click, raster_click):
+def plot_elec(value, electrode_click, raster_click, sub_plot_value):
     # print("plot function")
     # print(value)
     # print(type(value))
-    original_data = []
-
+    global original_data
+    global subfolder_dropdown_disable
+    global ephys_dash
+    global fig_map, circle_colors
+    global fig_raster
     button_id = ctx.triggered_id if not None else 'No clicks yet'
+    print('button_id')
     print(button_id)
     print("click")
     print(electrode_click)
     print("raster click")
     print(raster_click)
     firing_rate = ''
-    subfolder_dropdown_disable = True
+    if button_id == 'drop_down_subplot':
+        print("OASMFASMFOSAMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM")
+        print(original_data)
+        ephys_dash = MaxWellEphys(sub_plot_value, fr_coef, sttc_delta, sttc_thr)
+        fig_map, circle_colors = ephys_dash.plot_map()
+        fig_raster = ephys_dash.plot_raster()
+
     if value.startswith('s3'):
-        print("+++++++++++++++++++")
+
         # print(br.datasets_electrophysiology.load_metadata('2022-05-18'))
         # print(br.data.datasets.load_batch(value))
         # print(wr.list_directories(value))
-        original_data = wr.list_objects(value + 'original/data/')
+        # "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
+        #   "Trace_20220518_12_53_35_chip11350_curated.zip"
+        if button_id == 'drop_down':
+            original_data = wr.list_objects(value + 'derived/kilosort2/')
+            if original_data:
+                subfolder_dropdown_disable = False
+            else:
+                subfolder_dropdown_disable = True
         # print(value + 'original/data/')
-        print(original_data)
-
-        # TODO: build the figure base on the input data from this callback
-        if original_data:
-            subfolder_dropdown_disable = False
-            pass
-        else:
-            subfolder_dropdown_disable = True
-            # TODO: build the figures when there is no original/data/ path (can we work with such data?)
-            pass
 
     if raster_click and button_id == 'raster_plot':
         raster_number = raster_click['points'][0]['y']
@@ -261,9 +274,11 @@ def plot_elec(value, electrode_click, raster_click):
         )
     # print(firing_rate)
     # print(type(firing_rate))
-    last_electrode_click = electrode_click
-    last_raster_click = raster_click
+    # try:
     return fig_map, fig_raster, subfolder_dropdown_disable, 'Fire rate ' + str(firing_rate), original_data
+    # except:
+    #     original_data = wr.list_objects(main_path + 'derived/kilosort2/')
+    #     return fig_map, fig_raster, False, 'Fire rate ' + str(firing_rate), original_data
 
 
 if __name__ == '__main__':

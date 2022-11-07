@@ -61,17 +61,22 @@ class MaxWellEphys():
         #           "spike_times": self.spike_times,
         #           "pos": ['blue' * len(cluster_num)]}
 
-        raster = {"cluster_number": [],
-                  "spike_times": [],
-                  "pos": []}  # the pos is actually the color in the raster plot we can change
-        # it later to the actual position to have different colors base on the actual positions
-        raster = pd.DataFrame(data=raster)
-        # print(raster)
-        for i in range(len(cluster_num)):
-            for spike in self.spike_times[i]:
-                raster.loc[len(raster)] = [cluster_num[i], spike, 'blue']
+        self.raster_x = []
+        self.raster_y = []
 
-        self.raster_df = raster
+        for i in range(len(cluster_num)):
+            self.raster_x.extend(self.spike_times[i])
+            self.raster_y.extend([cluster_num[i]] * len(self.spike_times[i]))
+        # raster = {"cluster_number": [],
+        #           "spike_times": [],
+        #           "pos": []}  # the pos is actually the color in the raster plot we can change
+        # # it later to the actual position to have different colors base on the actual positions
+        # raster = pd.DataFrame(data=raster)
+        # for i in range(len(cluster_num)):
+        #     for spike in self.spike_times[i]:
+        #         raster.loc[len(raster)] = [cluster_num[i], spike, 'blue']
+        #
+        # self.raster_df = raster
 
     def plot_raster(self):
         """
@@ -82,8 +87,10 @@ class MaxWellEphys():
         raw_symbols = SymbolValidator().values
 
         fig_raster.add_trace(go.Scatter(
-            x=self.raster_df['spike_times'],
-            y=self.raster_df['cluster_number'],
+            # x=self.raster_df['spike_times'],
+            # y=self.raster_df['cluster_number'],
+            x = self.raster_x,
+            y = self.raster_y,
             mode='markers',
             marker=dict(
                 size=6,

@@ -233,16 +233,28 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
 
     if raster_click and button_id == 'raster_plot':
         raster_number = raster_click['points'][0]['y']
-        ephys_dash.raster_df.loc[ephys_dash.raster_df["cluster_number"] == raster_number,
-                                 ["pos"]] = 'black'
-        fig_raster.update_traces(
-            marker=dict(
-                color=ephys_dash.raster_df['pos'],
-            )
-        )
         cluster_number = list(ephys_dash.chn_map_df['cluster_number']).index(int(raster_number))
+        fig_raster.add_shape(type='line',
+                x0=0,
+                y0=int(raster_number),
+                x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                y1=int(raster_number),
+                line=dict(color='rgba(90, 228, 125, 0.4)'
+                          , width=6),
+                xref='x',
+                yref='y'
+        )
+        # ephys_dash.raster_df.loc[ephys_dash.raster_df["cluster_number"] == raster_number,
+        #                          ["pos"]] = 'black'
+        # fig_raster.update_traces(
+        #     marker=dict(
+        #         color=ephys_dash.raster_df['pos'],
+        #     )
+        # )
+
         firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
                                                 int(raster_number)]['fire_rate'].values[0]
+        firing_rate = "{:.3f}".format(float(firing_rate))
         # print("here")
         # print(firing_rate)
         # print(int(raster_number))
@@ -254,7 +266,7 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
         )
     if electrode_click and (button_id == 'electrode-map'):
         cluster_number = int(electrode_click['points'][0]['pointNumber'])
-        circle_colors[cluster_number] = '#a3a7e4'
+        circle_colors[cluster_number] = '#FF0000'
         fig_map.update_traces(
             marker=dict(
                 color=circle_colors
@@ -264,17 +276,28 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
         raster_number = electrode_click['points'][0]['hovertext']
         firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
                                                 int(raster_number)]['fire_rate'].values[0]
-        ephys_dash.raster_df.loc[ephys_dash.raster_df["cluster_number"] ==
-                                 int(raster_number), ["pos"]] = 'red'
-
-        fig_raster.update_traces(
-            marker=dict(
-                color=ephys_dash.raster_df['pos'],
-            )
-        )
+        firing_rate = "{:.3f}".format(float(firing_rate))
+        fig_raster.add_shape(type='line',
+                             x0=0,
+                             y0=int(raster_number),
+                             x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                             y1=int(raster_number),
+                             line=dict(color='rgba(222, 13, 13, 0.4)'
+                                       , width=6),
+                             xref='x',
+                             yref='y'
+                             )
+        # ephys_dash.raster_df.loc[ephys_dash.raster_df["cluster_number"] ==
+        #                          int(raster_number), ["pos"]] = 'red'
+        # fig_raster.update_traces(
+        #     marker=dict(
+        #         color=ephys_dash.raster_df['pos'],
+        #     )
+        # )
     # print(firing_rate)
     # print(type(firing_rate))
     # try:
+
     return fig_map, fig_raster, subfolder_dropdown_disable, 'Fire rate ' + str(firing_rate), original_data
     # except:
     #     original_data = wr.list_objects(main_path + 'derived/kilosort2/')

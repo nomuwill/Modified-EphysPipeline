@@ -105,7 +105,7 @@ class MaxWellEphys():
 
         fig_map = px.scatter(self.chn_map_df, x="pos_x", y="pos_y", hover_name="cluster_number",
                              size="fire_rate", width=770, height=420,
-                             labels={"pos_x": r'$\mu m$', "pos_y": r'$\mu m$'},
+                             labels={"pos_x": u"\u03BC"+"m", "pos_y": u"\u03BC"+"m"},
                              title="Electrode Map")
 
         fig_map.update_traces(marker=dict(color=circle_colors))

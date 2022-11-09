@@ -84,7 +84,6 @@ class MaxWellEphys():
                 size=6,
             ),
             marker_symbol=raw_symbols[3 * 137 + 2],
-
         ))
 
         fig_raster.update_layout(autosize=False,
@@ -126,7 +125,7 @@ class MaxWellEphys():
         :return: a template figure object
         """
         template = self.neuron_data[n][2]
-        xx = np.arange(0, len(template)/self.fs, 1/self.fs) * 1000   # unit is ms
+        xx = np.arange(0, len(template) / self.fs, 1 / self.fs) * 1000  # unit is ms
         fig_temp = px.line(x=xx, y=template, labels={'x': "Time (ms)"}, title="Spike Template", width=550, height=380)
         fig_temp.update_yaxes(visible=False, showticklabels=False)
         fig_temp.update_layout(font=dict(size=18))
@@ -146,6 +145,7 @@ class MaxWellEphys():
         fig_isi.update_layout(showlegend=False)
         fig_isi.show()
         return fig_isi
+
 
 def moving_fr_rate(spike_times: list, rec_length=None, bin_size=100):
     spike_times_all = np.sort(np.hstack(spike_times))

@@ -32,6 +32,8 @@ callback_clicks = 0
 original_data = wr.list_objects(main_path + 'derived/kilosort2/')
 template_plot = ephys_dash.plot_template(4)
 isi_plot = ephys_dash.plot_isi(4)
+already_clicked = set()
+raster_lines = []
 
 # print(ephys_dash.raster_df)
 ########## end ##########
@@ -93,9 +95,7 @@ app.layout = html.Div([
                               on=False,
                               label="Show Network",
                               labelPosition="top"),
-            # html.Script(type="text/javascript",
-            #             src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_SVG"),
-            dcc.Graph(id='electrode-map', mathjax=True),
+            dcc.Graph(id='electrode-map'),
         ], style={'padding': 10}),
         html.Div(children=[
             html.Div(children=[
@@ -105,18 +105,6 @@ app.layout = html.Div([
                 html.Div(children=[
                     dcc.Graph(id='isi_plot')
                 ]),
-
-                # html.Div(children=[
-                #     html.P(children="Firing Rate", id="fire_rate"),
-                # ], style={'background-color': '#e4e7ed',
-                #           'margin': '10px',
-                #           'padding': '15px',
-                #           'box-shadow': '2px',
-                #           'width': '200px',
-                #           'height': '50px',
-                #           'border-style': 'groove',
-                #           'text-align': 'center', }),
-
             ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
             html.Br(),
             dcc.Graph(id='raster_plot'),
@@ -161,9 +149,13 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
     global fig_raster
     global isi_plot
     global template_plot
+    global already_clicked
+    global raster_lines
+
     button_id = ctx.triggered_id if not None else 'No clicks yet'
 
     if button_id == 'drop_down_subplot':
+        already_clicked = set()
         ephys_dash = MaxWellEphys(sub_plot_value, fr_coef, sttc_delta, sttc_thr)
         fig_map, circle_colors = ephys_dash.plot_map()
         fig_raster = ephys_dash.plot_raster()
@@ -182,55 +174,91 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
     if raster_click and button_id == 'raster_plot':
         raster_number = raster_click['points'][0]['y']
         cluster_number = list(ephys_dash.chn_map_df['cluster_number']).index(int(raster_number))
-        fig_raster.add_shape(type='line',
-                             x0=0,
-                             y0=int(raster_number),
-                             x1=max(ephys_dash.spike_times[int(cluster_number)]),
-                             y1=int(raster_number),
-                             line=dict(color='rgba(0, 255, 0, 0.4)'
-                                       , width=6),
-                             xref='x',
-                             yref='y'
-                             )
-
-        # firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
-        #                                         int(raster_number)]['fire_rate'].values[0]
-        # firing_rate = "{:.3f}".format(float(firing_rate))
-        circle_colors[cluster_number] = '#00FF00'
-        fig_map.update_traces(
-            marker=dict(
-                color=circle_colors
+        if cluster_number in already_clicked:
+            circle_colors[cluster_number] = '#000000'
+            fig_map.update_traces(
+                marker=dict(
+                    color=circle_colors
+                )
             )
-        )
-        isi_plot = ephys_dash.plot_isi(int(cluster_number))
-        template_plot = ephys_dash.plot_template(int(cluster_number))
-        return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
+            temp_shape = dict(type='line',
+                              x0=0,
+                              y0=int(raster_number),
+                              x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                              y1=int(raster_number),
+                              xref='x',
+                              yref='y')
+            # raster_lines.append(temp_shape)
+            fig_raster.update_shapes(patch=dict(line=dict(color='rgba(255, 255, 255, 0)'), ), selector=temp_shape)
+            already_clicked.remove(cluster_number)
+
+        else:
+            temp_shape = dict(type='line',
+                              x0=0,
+                              y0=int(raster_number),
+                              x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                              y1=int(raster_number),
+                              line=dict(color='rgba(0, 255, 0, 0.4)'
+                                        , width=6),
+                              xref='x',
+                              yref='y',
+                              )
+
+            fig_raster.add_shape(temp_shape, editable=True)
+            circle_colors[cluster_number] = '#00FF00'
+            # print(circle_colors)
+            fig_map.update_traces(
+                marker=dict(
+                    color=circle_colors
+                )
+            )
+            isi_plot = ephys_dash.plot_isi(int(cluster_number))
+            template_plot = ephys_dash.plot_template(int(cluster_number))
+            already_clicked.add(cluster_number)
+            return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
+
     if electrode_click and (button_id == 'electrode-map'):
         cluster_number = int(electrode_click['points'][0]['pointNumber'])
-        circle_colors[cluster_number] = '#FF0000'
-        fig_map.update_traces(
-            marker=dict(
-                color=circle_colors
+        raster_number = int(electrode_click['points'][0]['hovertext'])
+        if cluster_number in already_clicked:
+            circle_colors[cluster_number] = '#000000'
+            fig_map.update_traces(
+                marker=dict(
+                    color=circle_colors
+                )
             )
-        )
+            temp_shape = dict(type='line',
+                              x0=0,
+                              y0=int(raster_number),
+                              x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                              y1=int(raster_number),
+                              xref='x',
+                              yref='y'
+                              )
+            fig_raster.update_shapes(patch=dict(line=dict(color='rgba(255, 255, 255, 0)'), ), selector=temp_shape)
+            already_clicked.remove(cluster_number)
+        else:
+            circle_colors[cluster_number] = '#FF0000'
+            fig_map.update_traces(
+                marker=dict(
+                    color=circle_colors
+                )
+            )
 
-        raster_number = electrode_click['points'][0]['hovertext']
-        # firing_rate = ephys_dash.chn_map_df.loc[ephys_dash.chn_map_df['cluster_number'] ==
-        #                                         int(raster_number)]['fire_rate'].values[0]
-        # firing_rate = "{:.3f}".format(float(firing_rate))
-        fig_raster.add_shape(type='line',
-                             x0=0,
-                             y0=int(raster_number),
-                             x1=max(ephys_dash.spike_times[int(cluster_number)]),
-                             y1=int(raster_number),
-                             line=dict(color='rgba(222, 13, 13, 0.4)'
-                                       , width=6),
-                             xref='x',
-                             yref='y'
-                             )
-        isi_plot = ephys_dash.plot_isi(int(cluster_number))
-        template_plot = ephys_dash.plot_template(int(cluster_number))
-        return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
+            fig_raster.add_shape(type='line',
+                                 x0=0,
+                                 y0=int(raster_number),
+                                 x1=max(ephys_dash.spike_times[int(cluster_number)]),
+                                 y1=int(raster_number),
+                                 line=dict(color='rgba(222, 13, 13, 0.4)'
+                                           , width=6),
+                                 xref='x',
+                                 yref='y'
+                                 )
+            isi_plot = ephys_dash.plot_isi(int(cluster_number))
+            template_plot = ephys_dash.plot_template(int(cluster_number))
+            already_clicked.add(cluster_number)
+            return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
 
     return fig_map, fig_raster, isi_plot, template_plot, subfolder_dropdown_disable, original_data
 

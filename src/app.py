@@ -116,15 +116,13 @@ app.layout = html.Div([
                 #           'height': '50px',
                 #           'border-style': 'groove',
                 #           'text-align': 'center', }),
-            ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
 
+            ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
+            html.Br(),
+            dcc.Graph(id='raster_plot'),
         ], style={'flex-direction': 'column', 'display': 'flex'}),
 
     ], style={'display': 'flex', 'flex-direction': 'row'}),
-    html.Br(),
-    html.Div([
-        dcc.Graph(id='raster_plot'),
-    ], style={'display': 'flex', 'justify-content': 'center'}),
 ], )
 
 
@@ -133,8 +131,8 @@ app.layout = html.Div([
     Input('drop_down', 'search_value')
 )
 def drop_down(search_value):
-    print(search_value)
-    print(type(search_value))
+    # print(search_value)
+    # print(type(search_value))
     uuids = wr.list_directories('s3://braingeneers/ephys/')
     return uuids
 
@@ -189,7 +187,7 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
                              y0=int(raster_number),
                              x1=max(ephys_dash.spike_times[int(cluster_number)]),
                              y1=int(raster_number),
-                             line=dict(color='rgba(90, 228, 125, 0.4)'
+                             line=dict(color='rgba(0, 255, 0, 0.4)'
                                        , width=6),
                              xref='x',
                              yref='y'

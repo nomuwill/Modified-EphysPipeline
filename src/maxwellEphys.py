@@ -28,6 +28,8 @@ class MaxWellEphys():
         chn_pos = np.asarray(list(self.neuron_data.values()), dtype=object)[:, 1]
         chn_pos = np.concatenate(chn_pos).reshape(len(chn_pos), 2)
 
+        self.fs = fs
+
         ##----- Create channel map -----##
         cluster_num = np.arange(1, len(self.spike_times) + 1)
         fire_rate = ephys_data.rates(unit='Hz') * fr_coef
@@ -117,7 +119,9 @@ class MaxWellEphys():
         # circle_colors[-1] = '#a3a7e4'
 
         fig_map = px.scatter(self.chn_map_df, x="pos_x", y="pos_y", hover_name="cluster_number",
-                             size="fire_rate", width=1100, height=600, title="Electrode Map")
+                             size="fire_rate", width=550, height=300,
+                             labels={"pos_x": r'$\mu$m', "pos_y": r'$\mu$m'},
+                             title="Electrode Map")
 
         fig_map.update_traces(marker=dict(color=circle_colors))
 
@@ -129,6 +133,32 @@ class MaxWellEphys():
 
         return fig_map, circle_colors
 
+    def plot_template(self, n):
+        """
+        Plot a spike template and its neighbors for a chosen unit from the electrode map.
+        :param n: index to the neurons, range [0, cluster_number]
+        :return: a template figure object
+        """
+        template = self.neuron_data[n][2]
+        xx = np.arange(0, len(template)/self.fs, 1/self.fs) * 1000   # unit is ms
+        fig_temp = px.line(x=xx, y=template, labels={'x': "Time (ms)"})
+        fig_temp.update_yaxes(visible=False, showticklabels=False)
+        fig_temp.update_layout(font=dict(size=18))
+        fig_temp.show()
+        return fig_temp
+
+    def plot_isi(self, n):
+        """
+        Plot interspike interval distribution for a chosen unit from the electrode map.
+        :param n: index to the neurons, range [0, cluster_number]
+        :return: a template figure object
+        """
+        isi = np.diff(self.spike_times[n])
+        fig_isi = px.histogram(isi, nbins=round(max(isi)))
+        fig_isi.update_layout(xaxis_title="Time (ms)", yaxis_title="Count", font=dict(size=18))
+        fig_isi.update_layout(xaxis_range=[0, 100])
+        fig_isi.show()
+        return fig_isi
 
 def moving_fr_rate(spike_times: list, rec_length=None, bin_size=100):
     spike_times_all = np.sort(np.hstack(spike_times))

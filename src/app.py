@@ -5,11 +5,80 @@ from dash import Dash, html, dcc, Input, Output, ctx
 import dash_daq as daq
 import braingeneers.utils.s3wrangler as wr
 from maxwellEphys import *
+import time
+import pickle
+
 
 # dash setting
+
+def serve_layout():
+    global original_data
+    global subfolder_dropdown_disable
+    global ephys_dash
+    global fig_map, circle_colors
+    global fig_raster
+    global isi_plot
+    global template_plot
+    global already_clicked
+    global raster_lines
+    main_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/"
+    phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
+               "Trace_20220518_12_53_35_chip11350_curated.zip"
+    initial_dropdown_values = wr.list_objects(main_path + 'derived/kilosort2/')
+    # fire_rate = ''
+    callback_clicks = 0
+
+    with open('./initial_dictionary', 'rb') as f:
+        (original_data,
+         subfolder_dropdown_disable,
+         ephys_dash,
+         fig_map, circle_colors,
+         fig_raster,
+         isi_plot,
+         template_plot,
+         already_clicked,
+         raster_lines) = pickle.load(f)
+
+    layout = html.Div([
+        html.H1("MaxWell Electrophysiology dashboard"),
+        html.Br(),
+        # dcc.Loading(id="loading1", children=[html.Div(
+        #     id="loading2")], type="default", fullscreen=True),
+        html.Div(children=[
+            html.Div(children=[
+                html.Label('Dataset (UUID)'),
+                dcc.Dropdown(options=['id_1', 'id_2', 'id_3'], value=main_path, id="drop_down"),
+                dcc.Dropdown(options=initial_dropdown_values, value=phy_path, id="drop_down_subplot", disabled=False),
+                html.Div(id='dd-output-container'),
+                html.Br(),
+                daq.BooleanSwitch(id='show_network',
+                                  on=False,
+                                  label="Show Network",
+                                  labelPosition="top"),
+                dcc.Graph(id='electrode-map'),
+            ], style={'padding': 10}),
+            html.Div(children=[
+                html.Div(children=[
+                    html.Div(children=[
+                        dcc.Graph(id='template_plot')
+                    ], ),
+                    html.Div(children=[
+                        dcc.Graph(id='isi_plot')
+                    ]),
+                ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
+                html.Br(),
+                dcc.Graph(id='raster_plot'),
+            ], style={'flex-direction': 'column', 'display': 'flex'}),
+
+        ], style={'display': 'flex', 'flex-direction': 'row'}),
+    ], )
+    return layout
+
+
 app = Dash(__name__)
 
 server = app.server
+
 colors = {'background': 'white',
           'borderline': 'black'}
 
@@ -19,21 +88,54 @@ sttc_thr = 0.35
 fr_coef = 10
 # fs = 20000
 
-main_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/"
-phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
-           "Trace_20220518_12_53_35_chip11350_curated.zip"
-ephys_dash = MaxWellEphys(phy_path, fr_coef, sttc_delta, sttc_thr)
-fig_map, circle_colors = ephys_dash.plot_map()
-fig_raster = ephys_dash.plot_raster()
-initial_dropdown_values = wr.list_objects(main_path + 'derived/kilosort2/')
-subfolder_dropdown_disable = False
-# fire_rate = ''
-callback_clicks = 0
-original_data = wr.list_objects(main_path + 'derived/kilosort2/')
-template_plot = ephys_dash.plot_template(4)
-isi_plot = ephys_dash.plot_isi(4)
-already_clicked = set()
-raster_lines = []
+# time1 = time.time()
+# print(time1)
+# main_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/"
+# phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" \
+#            "Trace_20220518_12_53_35_chip11350_curated.zip"
+# ephys_dash = MaxWellEphys(phy_path, fr_coef, sttc_delta, sttc_thr)
+# print("init", time.time() - time1)
+# fig_map, circle_colors = ephys_dash.plot_map()
+# print('fig map ', time.time() - time1)
+# fig_raster = ephys_dash.plot_raster()
+# print('raster map ', time.time() - time1)
+# initial_dropdown_values = wr.list_objects(main_path + 'derived/kilosort2/')
+# subfolder_dropdown_disable = False
+# # fire_rate = ''
+# callback_clicks = 0
+# original_data = wr.list_objects(main_path + 'derived/kilosort2/')
+# template_plot = ephys_dash.plot_template(4)
+# isi_plot = ephys_dash.plot_isi(4)
+# already_clicked = set()
+# raster_lines = []
+# print('else ', time.time() - time1)
+
+
+
+# to_save_dict = (
+#     original_data,
+#     subfolder_dropdown_disable,
+#     ephys_dash,
+#     fig_map, circle_colors,
+#     fig_raster,
+#     isi_plot,
+#     template_plot,
+#     already_clicked,
+#     raster_lines
+# )
+# with open('initial_dictionary', 'wb') as f:
+#     pickle.dump(to_save_dict, f)
+# exit()
+with open('./initial_dictionary', 'rb') as f:
+    (original_data,
+     subfolder_dropdown_disable,
+     ephys_dash,
+     fig_map, circle_colors,
+     fig_raster,
+     isi_plot,
+     template_plot,
+     already_clicked,
+     raster_lines) = pickle.load(f)
 
 # print(ephys_dash.raster_df)
 ########## end ##########
@@ -81,37 +183,7 @@ raster_lines = []
 
 # ------------------------- dash app ---------------------------#
 # app.layout = html.Div(style={'backgroundColor': colors['background']},
-app.layout = html.Div([
-    html.H1("MaxWell Electrophysiology dashboard"),
-    html.Br(),
-    html.Div(children=[
-        html.Div(children=[
-            html.Label('Dataset (UUID)'),
-            dcc.Dropdown(options=['id_1', 'id_2', 'id_3'], value=main_path, id="drop_down"),
-            dcc.Dropdown(options=initial_dropdown_values, value=phy_path, id="drop_down_subplot", disabled=False),
-            html.Div(id='dd-output-container'),
-            html.Br(),
-            daq.BooleanSwitch(id='show_network',
-                              on=False,
-                              label="Show Network",
-                              labelPosition="top"),
-            dcc.Graph(id='electrode-map'),
-        ], style={'padding': 10}),
-        html.Div(children=[
-            html.Div(children=[
-                html.Div(children=[
-                    dcc.Graph(id='template_plot')
-                ], ),
-                html.Div(children=[
-                    dcc.Graph(id='isi_plot')
-                ]),
-            ], style={'padding': 10, 'display': 'flex', 'flex-direction': 'row'}),
-            html.Br(),
-            dcc.Graph(id='raster_plot'),
-        ], style={'flex-direction': 'column', 'display': 'flex'}),
-
-    ], style={'display': 'flex', 'flex-direction': 'row'}),
-], )
+app.layout = serve_layout
 
 
 @app.callback(
@@ -133,6 +205,7 @@ def drop_down(search_value):
     Output('drop_down_subplot', 'disabled'),
     # Output('fire_rate', 'children'),
     Output('drop_down_subplot', 'options'),
+    # Output("loading1", "children"),
     Input('drop_down', 'value'),
     Input('electrode-map', 'clickData'),
     Input('raster_plot', 'clickData'),
@@ -151,9 +224,8 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
     global template_plot
     global already_clicked
     global raster_lines
-
+    first_time = time.time()
     button_id = ctx.triggered_id if not None else 'No clicks yet'
-
     if button_id == 'drop_down_subplot':
         already_clicked = set()
         ephys_dash = MaxWellEphys(sub_plot_value, fr_coef, sttc_delta, sttc_thr)
@@ -192,6 +264,7 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
             fig_raster.update_shapes(patch=dict(line=dict(color='rgba(255, 255, 255, 0)'), ), selector=temp_shape)
             already_clicked.remove(cluster_number)
 
+
         else:
             temp_shape = dict(type='line',
                               x0=0,
@@ -216,7 +289,9 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
             template_plot = ephys_dash.plot_template(int(cluster_number))
             already_clicked.add(cluster_number)
             return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
-
+    # second_time = time.time()
+    # print('second', second_time)
+    # print(second_time - first_time)
     if electrode_click and (button_id == 'electrode-map'):
         cluster_number = int(electrode_click['points'][0]['pointNumber'])
         raster_number = int(electrode_click['points'][0]['hovertext'])
@@ -259,10 +334,8 @@ def plot_elec(value, electrode_click, raster_click, sub_plot_value):
             template_plot = ephys_dash.plot_template(int(cluster_number))
             already_clicked.add(cluster_number)
             return fig_map, fig_raster, isi_plot, template_plot, dash.no_update, dash.no_update
-
     return fig_map, fig_raster, isi_plot, template_plot, subfolder_dropdown_disable, original_data
 
-
 if __name__ == '__main__':
-    app.run_server(debug=False, port=8050, host='0.0.0.0')  # include hot-reloading by default
+    app.run_server(debug=True, port=8050, host='0.0.0.0')  # include hot-reloading by default
     # app.run_server(debug=True, port=8050)  # include hot-reloading by default

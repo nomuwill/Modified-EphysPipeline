@@ -7,6 +7,7 @@ COPY requirements.txt ./src/requirements.txt
 RUN set -ex && \
     pip install -r ./src/requirements.txt
 
+COPY initial_dictionary ./src/initial_dictionary
 COPY ./src/top_level.txt /usr/local/lib/python3.10/site-packages/scipy-1.9.3.dist-info/top_level.txt
 
 # PRP setup

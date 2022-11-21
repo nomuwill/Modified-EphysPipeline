@@ -5,6 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.validators.scatter.marker import SymbolValidator
 import plotly.express as px
+from plotly.subplots import make_subplots
+
 
 
 class MaxWellEphys():
@@ -29,7 +31,6 @@ class MaxWellEphys():
         chn_pos = np.concatenate(chn_pos).reshape(len(chn_pos), 2)
 
         self.fs = fs
-
         ##----- Create channel map -----##
         cluster_num = np.arange(1, len(self.spike_times) + 1)
         fire_rate = ephys_data.rates(unit='Hz') * fr_coef
@@ -70,9 +71,12 @@ class MaxWellEphys():
         """
         :return: The raster plot figure and the df that the raster plot is created by, in order to change color later
         """
-        # TODO: add firing rate subplot using moving_fr_rate (see below)
-        fig_raster = go.Figure()
+        fr_bins, firing_rate = moving_fr_rate(self.spike_times)
+        colors = {'background': 'white', 'borderline': 'black'}
+        # fig_raster = go.Figure()
         raw_symbols = SymbolValidator().values
+        fig_raster = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
+                                   row_width=[0.2, 0.7])
 
         fig_raster.add_trace(go.Scattergl(
             # x=self.raster_df['spike_times'],
@@ -80,16 +84,25 @@ class MaxWellEphys():
             x=self.raster_x,
             y=self.raster_y,
             mode='markers',
-            marker=dict(
-                size=6,
-            ),
-            marker_symbol=raw_symbols[3 * 137 + 2],
-        ))
+            marker=dict(size=4, color='black', symbol='line-ns'),
+        ), row=1, col=1)
 
+        fig_raster.add_trace(go.Scattergl(
+            x=fr_bins[:-1], y=firing_rate,
+            mode='lines'),
+            row=2, col=1)
+
+        fig_raster.update_xaxes(showticklabels=False)
+        fig_raster.update_xaxes(showticklabels=True, row=2, col=1)
+        fig_raster.update_layout(font=dict(size=18))
         fig_raster.update_layout(autosize=False,
                                  width=1400,
                                  height=700,
                                  title="Raster Plot", )
+        fig_raster.update_xaxes(showline=True, linewidth=1, linecolor=colors['borderline'], mirror=True)
+        fig_raster.update_yaxes(showline=True, linewidth=1, linecolor=colors['borderline'], mirror=True)
+        fig_raster.update_layout(showlegend=False, plot_bgcolor=colors['background'],
+                                 paper_bgcolor=colors['background'])
 
         return fig_raster
 
@@ -105,7 +118,7 @@ class MaxWellEphys():
 
         fig_map = px.scatter(self.chn_map_df, x="pos_x", y="pos_y", hover_name="cluster_number",
                              size="fire_rate", width=770, height=420,
-                             labels={"pos_x": u"\u03BC"+"m", "pos_y": u"\u03BC"+"m"},
+                             labels={"pos_x": u"\u03BC" + "m", "pos_y": u"\u03BC" + "m"},
                              title="Electrode Map")
 
         fig_map.update_traces(marker=dict(color=circle_colors))

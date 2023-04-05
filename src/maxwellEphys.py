@@ -8,10 +8,6 @@ class MaxWellEphys:
     def __init__(self, phy_path, fr_coef, sttc_delta, sttc_thr, fs):
         """
         load spike sorted data from s3 using analysis.read_phy_files()
-        :param phy_path: a s3 path
-        :return: a list of spike_times as [spike_times] and neuron_data
-        dictionary structured as {new_cluster_id:
-        [channel_id, (chan_pos_x, chan_pos_y), [chan_template], {channel_id:cluster_templates}]}
         Generate dataframe for plotting functions
         """
         self.ephys_data = analysis.read_phy_files(phy_path)
@@ -30,6 +26,11 @@ class MaxWellEphys:
         temp_pos = self.neuron_dict[key]['neighbor_positions']
         templates = self.neuron_dict[key]['neighbor_templates']
         return ch, pos, temp_chs, temp_pos, templates
+
+    def get_amplitudes(self, key):
+        ch = self.neuron_dict[key]['channel']
+        amplitudes = self.neuron_dict[key]['amplitudes']
+        return ch, amplitudes
 
     def channel_map(self):
         """

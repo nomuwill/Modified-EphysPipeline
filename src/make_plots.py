@@ -172,4 +172,38 @@ class PlotEphys(MaxWellEphys):
                               )
         return fig_isi
 
-    # def plot_corr(self):
+    def plot_amplitudes(self, n):
+        """
+        plot amplitude distribution
+        :param n:
+        :return:
+        """
+        ch, amps = self.get_amplitudes(n)
+
+        fig_amp = make_subplots(rows=1, cols=2, shared_yaxes="all",
+                                column_widths=[0.8, 0.2], horizontal_spacing=0)
+        fig_amp.add_trace(go.Scatter(x=self.spike_times[n]/1000, y=amps, mode='markers'),
+                          row=1, col=1)
+        fig_amp.add_trace(go.Histogram(y=amps),
+                          row=1, col=2)
+
+        fig_amp.update_layout(showlegend=False,
+                              plot_bgcolor=self.colors['background'],
+                              paper_bgcolor=self.colors['background'])
+        fig_amp.update_xaxes(showline=True, linewidth=1, linecolor='black',
+                             title="Time (s)", mirror=True, row=1, col=1)
+        fig_amp.update_yaxes(showline=True, linewidth=2, linecolor='black',
+                             title="Voltage("+u"\u03BC"+"V)", mirror=True, row=1, col=1)
+        fig_amp.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=1, col=2)
+        fig_amp.update_yaxes(showline=True, linewidth=2, linecolor='black', mirror=True, row=1, col=2)
+
+        return fig_amp
+
+
+    # def plot_corr(self, n, bin_size=1):
+    #     """
+    #     plot cross-correlogram with lag in [-50, 50]ms with 1ms resolution
+    #     :param n:
+    #     :return:
+    #     """
+    #     orginal = self.spike_times[n]

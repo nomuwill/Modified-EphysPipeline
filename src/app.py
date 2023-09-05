@@ -18,18 +18,6 @@ import pickle
 app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
 
-
-# def serve_layout():
-    # global original_data
-    # global subfolder_dropdown_disable
-    # global ephys_dash
-    # global fig_map, circle_colors
-    # global fig_raster
-    # global isi_plot
-    # global template_plot
-    # global already_clicked
-    # global raster_lines
-
 global ephys_dash
 global fig_map, circle_colors
 global fig_raster
@@ -52,17 +40,6 @@ phy_path = "s3://braingeneers/ephys/2022-05-18-e-connectoid/derived/kilosort2/" 
 initial_dropdown_main = wr.list_objects(main_path)
 initial_dropdown_values = wr.list_objects(main_path + 'original/data/')
 initial_dropdown_derived = wr.list_objects(main_path + 'derived/kilosort2/')
-
-    # with open('./initial_dictionary', 'rb') as f:
-    #     (original_data,
-    #      subfolder_dropdown_disable,
-    #      ephys_dash,
-    #      fig_map, circle_colors,
-    #      fig_raster,
-    #      isi_plot,
-    #      template_plot,
-    #      already_clicked,
-    #      raster_lines) = pickle.load(f)
 
 # all figures
 electrode = dbc.Card(dcc.Graph(id='electrode_map',

@@ -200,10 +200,10 @@ class PlotEphys(MaxWellEphys):
         return fig_amp
 
 
-    # def plot_corr(self, n, bin_size=1):
-    #     """
-    #     plot cross-correlogram with lag in [-50, 50]ms with 1ms resolution
-    #     :param n:
-    #     :return:
-    #     """
-    #     orginal = self.spike_times[n]
+    def plot_corr(self, n, bin_size=1):
+        """
+        plot cross-correlogram with lag in [-50, 50]ms with 1ms resolution
+        :param n:
+        :return:
+        """
+        orginal = self.spike_times[n]

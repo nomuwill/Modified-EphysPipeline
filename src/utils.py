@@ -133,3 +133,15 @@ def format_dict_textarea(input_dict):
 
     walk_dict(input_dict)
     return out_str
+
+
+def filter_dropdown(search_value=None):
+    print("search_value:", search_value)
+    uuids = wr.list_directories(DEFAULT_BUCKET)
+    if search_value is not None:
+        filtered = [id for id in uuids if search_value in id]
+        print(f"number of filtered uuids {len(filtered)}")
+        return filtered
+    else:
+        print(f"number of total uuids {len(uuids)}")
+        return uuids

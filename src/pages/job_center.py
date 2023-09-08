@@ -13,7 +13,7 @@ import time
 
 # TODO: How to deal with inconsistent index when user remove rows?
 # TODO: show total number of recordings in a uuid (read metadata) -- Done
-# TODO: create datatable for chained jobs
+# TODO: create datatable for chained jobs -- Done
 # TODO: functions to check job status in real time (a new page?)
 # TODO: Progress bar for process that needs time
 
@@ -36,7 +36,7 @@ table_layout = dash_table.DataTable(
 # page layout
 print(f"Getting ready for page layout... ")
 layout = dbc.Container([
-    html.H2("Data Processing Job Center"),
+    html.H2("Data Processing Center"),
     # html.Br(),
     html.Hr(),
     dbc.Row(html.Div([
@@ -146,16 +146,8 @@ layout = dbc.Container([
     Output('dropdown', 'options'),
     Input('textarea_filter_uuid', 'value'),
 )
-def drop_down(search_value=None):
-    print("search_value:", search_value)
-    uuids = wr.list_directories(DEFAULT_BUCKET)
-    if search_value is not None:
-        filtered = [id for id in uuids if search_value in id]
-        print(f"number of filtered uuids {len(filtered)}")
-        return filtered
-    else:
-        print(f"number of total uuids {len(uuids)}")
-        return uuids
+def drop_down(value=None):
+    return utils.filter_dropdown(search_value=value)
 
 
 @callback(

@@ -21,7 +21,7 @@ from values import *
 # TODO: Add full electrode footprint
 
 # dash setting
-dash.register_page(__name__)
+# dash.register_page(__name__)
 
 global ephys_dash
 global fig_map, circle_colors

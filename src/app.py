@@ -17,6 +17,7 @@ for page in dash.page_registry.values():
     print(f"Page to load: {page['name']} - {page['path']}, {page['relative_path']}")
 
 app.layout = html.Div([
+    dcc.Store(id="multipage_data", data=str("{}"), storage_type='local'),
     html.H1('Multi-page Dashboard (Needs a Better Name)'),
     html.Div([
         html.Div(
@@ -28,4 +29,4 @@ app.layout = html.Div([
 
 
 if __name__ == '__main__':
-    app.run(debug=True)  # include hot-reloading by default
+    app.run_server(debug=True)  # include hot-reloading by default

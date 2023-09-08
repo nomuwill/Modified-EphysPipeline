@@ -100,7 +100,7 @@ layout = dbc.Container([
                                             {'label': 'Spike Sorting (Kilosort2)', 'value': 1},
                                             {'label': 'Curation (Quality Metrics)', 'value': 2},
                                             {'label': 'Figures (Raster/Electrode Map)', 'value': 3},
-                                            {'label': 'Another Analysis Algorithms (To be added...)', 'value': 4}],
+                                            {'label': 'Other Algorithms (To be added...)', 'value': 4}],
                                    value=[],
                                    labelStyle={'display': 'block'},
                                ),
@@ -292,27 +292,38 @@ def disable_job_button(n_clicks, data):
 @callback(
     Output("job_btn_return", "children"),
     Output('batch_job', 'value'),
+    Output('multipage_data', 'data'),
     Input("job_start_btn", 'n_clicks'),
     State("job_table", "data"),
+    State("multipage_data", 'data'),
     prevent_initial_call=True
 )
-def save_and_start_jobs(n_clicks, data):
+def save_and_start_jobs(n_clicks, data, job_json):
     if len(data) == 0:
         msg = "Add job to start"
-        return html.Div(msg), None
+        return html.Div(msg), None, job_json
     if "job_start_btn" == ctx.triggered_id and len(data) > 0:
         now = datetime.now()
         curr_dt_csv = now.strftime("%Y%m%d%H%M%S") + '.csv'
+        # TODO: send this file by dcc.Store to Status page
         s3_path = os.path.join(SERVICE_BUCKET, curr_dt_csv)
         msg = utils.upload_to_s3(data, s3_path)
         # time.sleep(10) # simulate network lag
         if msg is not None:
-            return html.Div(msg), None
+            return html.Div(msg), None, job_json
         else:
             job_index = [int(d['index']) for d in data if d['next_job'] == "None"]
             msg = utils.mqtt_start_job(s3_path, job_index)
             if msg is not None:
-                return html.Div(msg), None
+                return html.Div(msg), None, job_json
             else:
                 msg = "Finished Uploading, jobs started"
-                return html.Div(msg), "Reset"
+                print(f"current job csv {job_json}")
+                if len(job_json) == 0:
+                    job_dict = dict()
+                else:
+                    job_dict = json.loads(job_json)
+                job_dict[curr_dt_csv] = "active"
+                job_json = json.dumps(job_dict)
+                print(type(job_json), job_json)
+                return html.Div(msg), "Reset", job_json

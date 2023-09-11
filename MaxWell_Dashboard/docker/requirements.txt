@@ -1,0 +1,14 @@
+dash~=2.13.0
+plotly
+pandas
+gunicorn
+numpy
+dash_daq
+scipy
+dash_bootstrap_components
+kubernetes
+deprecated
+uuid
+tenacity
+csv
+json

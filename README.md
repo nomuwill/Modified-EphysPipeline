@@ -1,2 +1,1 @@
-# MaxWell_Dashboard
-Dashboard for MaxWell ephys data
+Building blocks for MaxWell HD-MEA data pipeline

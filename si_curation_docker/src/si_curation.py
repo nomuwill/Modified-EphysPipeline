@@ -15,7 +15,7 @@ from utils import *
 import logging
 import h5py
 
-BUCKET = "s3://braingeneers/ephys/"
+# BUCKET = "s3://braingeneers/ephys/"
 JOB_KWARGS = dict(n_jobs=10, progress_bar=True)
 os.environ["HDF5_PLUGIN_PATH"] = os.getcwd()
 LOG_FILE_NAME = "curation_log.txt"
@@ -62,7 +62,7 @@ class QualityMetrics:
         all_remove_ids.update(ids)
         ids = self.curate_by_fr()
         all_remove_ids.update(ids)
-        # ids = self.curate_by_redundant()
+        # ids = self.curate_by_redundant()  # output the cleaned units and the original/remove list
         # all_remove_ids.update(ids)
 
         logging.info(f"Total number of units to remove: {len(all_remove_ids)}")

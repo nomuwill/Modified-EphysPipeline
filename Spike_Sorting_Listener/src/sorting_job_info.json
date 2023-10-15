@@ -1,0 +1,19 @@
+{
+    "args": "./run.sh",
+    "cup_request": 12,
+    "memory_request": 32,
+    "disk_request": 400,
+    "GPU": 1,
+    "image": "surygeng/kilosort_docker:v0.2",
+    "whitelist_nodes": [
+        "gpu-10.nrp.mghpcc.org",
+        "gpu-11.nrp.mghpcc.org",
+        "gpu-12.nrp.mghpcc.org",
+        "gpu-13.nrp.mghpcc.org",
+        "gpu-14.nrp.mghpcc.org",
+        "gpu-15.nrp.mghpcc.org",
+        "gpu-16.nrp.mghpcc.org",
+        "gpu-17.nrp.mghpcc.org",
+        "gpu-18.nrp.mghpcc.org"
+    ]
+}

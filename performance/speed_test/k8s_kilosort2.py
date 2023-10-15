@@ -1,59 +1,49 @@
 from kubernetes import client, config
-import os
-import logging
-
-## use my personal bucket for testing
-DEFAULT_S3_BUCKET = "s3://braingeneers/ephys/"
 
 
 class Kube:
-    def __init__(self, job_name: str, job_info: dict, namespace='braingeneers'):
+    def __init__(self, job_name: str, dataset_prefix: str):
         config.load_kube_config()
         self.batch_v1 = client.BatchV1Api()
-        self.namespace = namespace
+        self.namespace = 'braingeneers'
         self.job_name = job_name
-        self.job_info = job_info
-        if "file_path" in job_info:
-            s3_path = job_info["file_path"]
-        else:
-            s3_path = os.path.join(DEFAULT_S3_BUCKET,
-                                   job_info["uuid"],
-                                   "original/data",
-                                   job_info["experiment"])
-
-        logging.info(f"create job for {s3_path}")
-        self.args = f"{job_info['args']} {s3_path}"
-        self.resources = {"cpu": str(self.job_info["cpu_request"]),
-                          "memory": str(self.job_info["memory_request"]) + "Gi",
-                          "ephemeral-storage": str(self.job_info["disk_request"]) + "Gi",
-                          "nvidia.com/gpu": str(self.job_info["GPU"])}
+        self.args = "./run.sh " + dataset_prefix
 
     def create_job_object(self):
         container = client.V1Container(
             name="container",
-            image=self.job_info["image"],
+            image="surygeng/kilosort_docker:v0.2",
             image_pull_policy="Always",
             command=["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"],
             args=[self.args],
             resources=client.V1ResourceRequirements(
-                requests=self.resources,
-                limits=self.resources
-            ),
+                requests={"cpu": "12", "memory": "32Gi", "ephemeral-storage": "300Gi", "nvidia.com/gpu": 1},
+                limits={"cpu": "16", "memory": "32Gi", "ephemeral-storage": "400Gi", "nvidia.com/gpu": 1}),
             env=[client.V1EnvVar(name="PYTHONUNBUFFERED", value='true'),
                  client.V1EnvVar(name="ENDPOINT_URL", value="http://rook-ceph-rgw-nautiluss3.rook"),
                  client.V1EnvVar(name="S3_ENDPOINT", value="rook-ceph-rgw-nautiluss3.rook")],
             volume_mounts=[client.V1VolumeMount(name="prp-s3-credentials", mount_path="/root/.aws/credentials",
                                                 sub_path="credentials")])
-        if "whitelist_nodes" in self.job_info:
-            affinity = client.V1Affinity(
-                node_affinity=client.V1NodeAffinity(
-                    required_during_scheduling_ignored_during_execution=client.V1NodeSelector(
-                        node_selector_terms=[client.V1NodeSelectorTerm(match_expressions=[
-                            client.V1NodeSelectorRequirement(key="kubernetes.io/hostname", operator="In",
-                                                             values=self.job_info["whitelist_nodes"]),
-                        ])])))
-        else:
-            affinity = None
+        affinity = client.V1Affinity(
+            node_affinity=client.V1NodeAffinity(
+                required_during_scheduling_ignored_during_execution=client.V1NodeSelector(
+                    node_selector_terms=[client.V1NodeSelectorTerm(match_expressions=[
+                        # client.V1NodeSelectorRequirement(
+                        # key="nvidia.com/gpu.product", operator="In", values=["NVIDIA-GeForce-GTX-1080-Ti"]
+                        # ),
+                        client.V1NodeSelectorRequirement(key="kubernetes.io/hostname", operator="In",
+                                                         values=["gpu-10.nrp.mghpcc.org",
+                                                                 "gpu-11.nrp.mghpcc.org",
+                                                                 "gpu-12.nrp.mghpcc.org",
+                                                                 "gpu-13.nrp.mghpcc.org",
+                                                                 "gpu-14.nrp.mghpcc.org",
+                                                                 "gpu-15.nrp.mghpcc.org",
+                                                                 "gpu-16.nrp.mghpcc.org",
+                                                                 "gpu-17.nrp.mghpcc.org",
+                                                                 "gpu-18.nrp.mghpcc.org"]),
+                        # client.V1NodeSelectorRequirement(key="feature.node.kubernetes.io/cpu-cpuid.AVX", operator="In",
+                        #                                  values=["true"])
+                    ])])))
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(labels={'name': 'simple-job'}),
             spec=client.V1PodSpec(restart_policy='Never', volumes=[
@@ -82,7 +72,7 @@ class Kube:
         resp = self.batch_v1.create_namespaced_job(
             body=self.create_job_object(),
             namespace=self.namespace)
-        return resp
+        return self.batch_v1
 
     def check_job_status(self):
         if self.check_job_exist():
@@ -99,4 +89,3 @@ class Kube:
             body=client.V1DeleteOptions(
                 propagation_policy='Foreground',
                 grace_period_seconds=0))
-

@@ -8,7 +8,7 @@ RUN pip install kubernetes \
     deprecated
 
 # PRP setup
-ENV ENDPOINT_URL="https://braingeneers.gi.ucsc.edu"
+ENV ENDPOINT_URL="https://s3.braingeneers.gi.ucsc.edu"
 
 COPY src/ /app
 WORKDIR /app

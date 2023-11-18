@@ -271,7 +271,7 @@ def check_exist(path):
 
 
 def create_sort(experiment, file_path):
-    with open("soring_job_info.json") as f:
+    with open("sorting_job_info.json") as f:
         job_info = json.load(f)
 
     job_info["file_path"] = file_path

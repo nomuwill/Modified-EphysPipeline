@@ -35,6 +35,7 @@ class QualityMetrics:
     def __init__(self, base_folder, rec_name, phy_folder,
                  min_snr=5, min_fr=0.1, max_isi_viol=0.2,
                  default=True):
+        self.redundant_pairs = None
         self.extract_path = None
         self._rec_path = posixpath.join(base_folder, rec_name)
         self.base_folder = base_folder
@@ -64,6 +65,7 @@ class QualityMetrics:
         all_remove_ids.update(ids)
         # ids = self.curate_by_redundant()  # output the cleaned units and the original/remove list
         # all_remove_ids.update(ids)
+        self.redundant_pairs = self.curate_by_redundant()
 
         logging.info(f"Total number of units to remove: {len(all_remove_ids)}")
 
@@ -144,13 +146,15 @@ class QualityMetrics:
         num_units = len(self.we.unit_ids)
         curated_redundant, redundant_unit_pairs = \
             curation.remove_redundant_units(self.we, align=False,
-                                            remove_strategy="highest_amplitude", extra_outputs=True)
+                                            remove_strategy="max_spikes", extra_outputs=True)
         print("done redundant")
+
         remove_ids = np.setdiff1d(self.we.sorting.unit_ids, curated_redundant.unit_ids)
         logging.info(f"Curated by checking redundant units. "
                      f"Remove number of units: {len(remove_ids)}/{num_units}")
-        self.we.sorting = curated_redundant
-        return remove_ids
+        # self.we.sorting = curated_redundant
+        # return remove_ids
+        return redundant_unit_pairs
 
     def package_cleaned(self):
         spike_data = self.compile_data()
@@ -198,6 +202,7 @@ class QualityMetrics:
                                 for c in clusters},
                       "neuron_data": neuron_dict,
                       "config": config,
+                      "redundant_pairs": self.redundant_pairs,
                       "fs": self.we_clean.recording.sampling_frequency}
         return spike_data
 
@@ -252,7 +257,7 @@ def remove_units(spike_train, neuron_dict, removed_ids):
 
 
 def upload_file(phy_path, local_file):
-    upload_path = phy_path.replace("_phy.zip", "_qm.zip")
+    upload_path = phy_path.replace("_phy.zip", "_qm_rd.zip")
     logging.info(f"Uploading data from {local_file} to {upload_path} ...")
     wr.upload(local_file=local_file, path=upload_path)
     logging.info("Done!")
@@ -264,9 +269,8 @@ def parse_uuid(data_path):
     phy_base_path = base_path.replace("original/data", "derived/kilosort2")
     if experiment.endswith(".raw.h5"):
         experiment = experiment.split(".raw.h5")[0]
-
     elif experiment.endswith(".h5"):
-        experiment = experiment.split(".h5")[0]
+        pass
     else:
         logging.error("File format not support")
     phy_path = posixpath.join(phy_base_path, experiment + "_phy.zip")

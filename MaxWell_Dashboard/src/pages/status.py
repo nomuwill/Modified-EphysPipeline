@@ -5,7 +5,9 @@ import dash_bootstrap_components as dbc
 import braingeneers.utils.s3wrangler as wr
 import json
 
+# Isn't "kubectl get pods" good enough?
 # TODO: send over job csv id from job_center page -- Done
+# TODO: get job status directly from prp, make it simple
 # TODO: show real-time job status when an job ID is selected
 
 

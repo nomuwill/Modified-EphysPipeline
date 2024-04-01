@@ -13,7 +13,7 @@ SERVICE_BUCKET = "s3://braingeneers/services/mqtt_job_listener/csvs"
 DEFAULT_BUCKET = "s3://braingeneers/ephys/"
 
 DEFAULT_JOBS = {"batch":
-                    {"image": "surygeng/kilosort_docker:latest",
+                    {"image": "surygeng/kilosort_docker:v0.2",
                      "args": "./run.sh",
                      "cpu_request": 12,
                      "memory_request": 32,
@@ -22,7 +22,7 @@ DEFAULT_JOBS = {"batch":
                      "next_job": "None"
                      },
                 "chained": {
-                    0: {"image": "surygeng/kilosort_docker:latest",
+                    0: {"image": "surygeng/kilosort_docker:v0.2",
                         "args": "./run.sh",
                         "cpu_request": 12,
                         "memory_request": 32,
@@ -36,7 +36,7 @@ DEFAULT_JOBS = {"batch":
                         "disk_request": 400,
                         "GPU": 1,
                         "next_job": "None"},
-                    2: {"image": "surygeng/qm_curation:latest",
+                    2: {"image": "surygeng/qm_curation:v0.2",
                         "args": "python si_curation.py",
                         "cpu_request": 8,
                         "memory_request": 32,

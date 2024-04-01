@@ -15,6 +15,6 @@ COPY src/ /app
 WORKDIR /app
 
 # run
-CMD ["python", "job_scanner.py"]
-
+#CMD ["python", "job_scanner.py"]
+CMD ["python", "scan_pod.py"]
 ## job_scanner:v0.1

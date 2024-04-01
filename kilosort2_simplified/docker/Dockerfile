@@ -16,6 +16,7 @@ RUN mkdir /install_matlab \
     && cd /install_matlab && unzip MATLAB_Runtime_R2019b_Update_9_glnxa64.zip && ./install -mode silent -agreeToLicense yes && cd / && rm -rf /install_matlab
 
 ### Python
+# ubuntu20.04 has a default python3.8 which is not compatiable with braingeneers
 RUN apt-get install -y python3\
     python3-pip \
     python-is-python3
@@ -24,24 +25,27 @@ RUN apt-get install -y python3\
 RUN python -m pip install --force-reinstall 'git+https://github.com/SpikeInterface/spikeinterface.git'
 RUN pip install numpy \
     pandas \
-#    matplotlib \
+    plotly \
     scipy \
-#    scikit-learn \
     h5py \
-    MEArec
+    MEArec\
+    pynwb \
+    deprecation \
+    matplotlib 
 
 #########################################
 ### Compiled kilosort2
 COPY matlab/ /project/matlab
 COPY src/ /project/src
 RUN chmod +x /project/src/run.sh
+RUN chmod +x /project/src/run_temp.sh
 
 # setup work directory
 RUN mkdir -p /project/SpikeSorting/inter/sorted/kilosort2
 WORKDIR /project/src
 
 # PRP setup
-ENV ENDPOINT_URL="https://s3-west.nrp-nautilus.io"
+ENV ENDPOINT_URL="https://s3.braingeneers.gi.ucsc.edu"
 ENV PATH="/usr/local/nvidia/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:."
 
-# container name: kilosort2:0.1
+# container name: ephys_pipeline:v0.1ephys_pipeline:v0.1

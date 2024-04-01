@@ -8,7 +8,7 @@ import dash_bootstrap_components as dbc
 # TODO: set better page titles
 # TODO: add user and password
 
-app = Dash(__name__, use_pages=True) #, external_stylesheets=[dbc.themes.SIMPLEX])
+app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.SIMPLEX])
 # server = app.server
 app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True

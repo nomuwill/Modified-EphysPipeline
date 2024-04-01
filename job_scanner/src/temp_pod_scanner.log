@@ -1,0 +1,6 @@
+2023-11-21 12:18:45,892 Start scanning edp- jobs for namespace braingeneers
+2023-11-21 12:18:46,514 Found credentials in shared credentials file: ~/.aws/credentials
+2023-11-21 12:28:48,193 Found credentials in shared credentials file: ~/.aws/credentials
+2023-11-21 12:28:49,860 pod edp-test-sort-tfzmq is Succeeded, saving info to s3://braingeneers/services/mqtt_job_listener/logs/pod_info/edp-test-sort-tfzmq.json...
+2023-11-21 12:28:49,962 Saved
+2023-11-21 12:28:49,963 smart_open.s3.MultipartWriter('braingeneers', 'services/mqtt_job_listener/logs/pod_info/edp-test-sort-tfzmq.json'): uploading part_num: 1, 19321 bytes (total 0.000GB)

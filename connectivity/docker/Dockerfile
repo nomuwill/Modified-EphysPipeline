@@ -1,0 +1,18 @@
+FROM python:3.10
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DASH_DEBUG_MODE=False
+
+RUN apt-get update && apt-get install -y time
+
+RUN pip install "braingeneers[iot,analysis,data]"
+RUN pip install deprecated \ 
+    matplotlib
+
+# PRP setup
+ENV ENDPOINT_URL="https://s3.braingeneers.gi.ucsc.edu"
+
+COPY src/ /app
+WORKDIR /app
+
+
+# surygeng/connectivity:v0.1

@@ -6,7 +6,7 @@ import braingeneers.utils.s3wrangler as wr
 import os
 import time
 
-TOPIC = "experiment/upload"
+TOPIC = "experiments/upload"
 
 
 def create_message(uuid, exp_list):
@@ -17,16 +17,26 @@ def create_message(uuid, exp_list):
     :param exp_list:
     :return:
     """
+    if uuid.endswith("/"):
+        uuid = uuid[:-1]
     message = {
         "uuid": uuid,
         "stitch": "False",
-        "ephys_experiments": {}
+        "overwrite": "False",
+        "ephys_experiments": {},
+        "output": f"s3://braingeneers/{uuid}/derived/stitch/result_phy.zip"
     }
     experiments = {}
     for exp in exp_list:
-        experiments[exp] = {"blocks": [{"path": f"/original/data/{exp}"}]}
+        exp_dataset = exp.split("/original/data/")[1]
+        if exp_dataset.endswith(".raw.h5"):
+            exp_name = exp_dataset.split(".raw.h5")[0]
+        else:
+            exp_name = exp_dataset
+        experiments[exp_name] = {"blocks": [{"path": f"original/data/{exp_dataset}"}]}
+
     message["ephys_experiments"] = experiments
-    # print(message)
+    print(message)
     return message
 
 
@@ -34,13 +44,13 @@ if __name__ == '__main__':
     default_bucket = "s3://braingeneers/ephys/"
     mb = messaging.MessageBroker(str(uuidgen.uuid4()))
 
-    print("#################################")
-    print("Welcome to Braingeneers Electrophysiology Data Pipeline")
-    print("Default bucket: s3://braingeneers/ephys/")
+    print("############### Welcome to Braingeneers Electrophysiology Data Pipeline ###############")
+    print(f"Default bucket: {default_bucket}")
 
     data_path = None
     uuid = None
     get_uuid = True
+    get_exp = True
     while get_uuid:
         uuid = input("Please enter a UUID: ")
         uuid = "".join(uuid.split())
@@ -54,32 +64,53 @@ if __name__ == '__main__':
             data_path = os.path.join(s3_path, "original/data/")
             # if wr.does_object_exist(os.path.join(s3_path, "metadata.json")):
             #     metadata = ephys.load_metadata(uuid)
-            print("Passed")
+            recs = wr.list_objects(data_path)
+            print(f"Found {len(recs)} recordings.")
+            for rec in recs:
+                print(rec)
             get_uuid = False
         else:
             print("No available recording. Please input another UUID")
 
     exp_list = wr.list_objects(data_path)
+    exp_name = [exp.split("/data/")[1] for exp in exp_list]
     # get experiment
-    experiment = input("Enter experiment name \n"
-                       "(To run for all of the experiments in the provided UUID, press Enter) \n"
-                       "(To run on a selection of experiments, input the name one after another,"
-                       " and separate them by space): ")
-    experiment = set(experiment.split(" "))
-    while "" in experiment:
-        experiment.remove("")
+    experiment = None
+    while get_exp:
+        experiment = input("Enter experiment name \n"
+                        "(To run for all of the experiments in the provided UUID, press Enter) \n"
+                        "(To run on a selection of experiments, input the name one after another,"
+                        " separate them by space): ")
+        experiment = set(experiment.split(" "))
+        while "" in experiment:
+            experiment.remove("")
+        num = len(experiment)
+        if num > 0:
+            for i, exp in enumerate(experiment):
+                if not exp.endswith(".h5"):
+                    print("Please input the full name of the experiment, including the extension .h5 or .raw.h5")
+                    break
+                else:
+                    if exp not in exp_name:
+                        print(f"Experiment {exp} is not in the provided UUID")
+                        break
+                    else:
+                        if i == num - 1:
+                            get_exp = False
+        else:
+            get_exp = False
+
+
+    exp_exist = []
     if len(experiment) == 0:  # run for all experiments
         exp_exist = exp_list.copy()
         print(f"Getting ready for all {len(exp_exist)} experiments...")
     else:
-        exp_exist = []
-        for exp in experiment:
-            if exp in exp_list:
-                exp_exist.append(exp)
+        exp_exist = [os.path.join(data_path, exp) for exp in experiment]
         print(f"Getting read for the selected {len(exp_exist)} experiments...")
 
-    metadata = create_message(uuid, exp_list)
+    metadata = create_message(uuid, exp_exist)
     mb.publish_message(topic=TOPIC, message=metadata, confirm_receipt=True)
     time.sleep(0.1)
     print(f"Message sent to {TOPIC} for UUID {uuid} for processing {len(exp_exist)} experiments")
-    print("#################################")
+    print("############### Thank You ###############")

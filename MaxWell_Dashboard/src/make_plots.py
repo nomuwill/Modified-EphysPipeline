@@ -7,6 +7,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 
+# TODO: add stats for firing rate, isi, burst distribution
 class PlotEphys(MaxWellEphys):
     def __init__(self, phy_path, fr_coef, sttc_delta, sttc_thr):
         super().__init__(phy_path, fr_coef, sttc_delta, sttc_thr, fs=20000.0)
@@ -36,7 +37,7 @@ class PlotEphys(MaxWellEphys):
         ), row=1, col=1)
 
         fig_raster.add_trace(go.Scattergl(
-            x=fr_bins[:-1] / 1000, y=firing_rate / len(self.spike_times),
+            x=fr_bins[:-1], y=firing_rate / len(self.spike_times),
             mode='lines',
             # labels={'x': "Time (s)", 'y': "Rate (Hz)"}
             xaxis="x2",
@@ -57,6 +58,86 @@ class PlotEphys(MaxWellEphys):
                                  xaxis2=dict(title="Time (s)"))
 
         return fig_raster
+
+    def plot_raster_fr(self):
+        bins, fr_avg = self.two_step_smooth()
+
+        fig = go.Figure()
+        y = 0
+        for vv in self.spike_times:
+            fig.add_trace(go.Scatter(x=vv, y=[y] * len(vv), mode='markers',
+                                     marker=dict(symbol='line-ns-open', size=3, color='black', opacity=0.7),
+                                     showlegend=False))
+            y += 1
+
+        fig.update_layout(
+            yaxis2=dict(overlaying='y', side='right', title='Population Firing Rate (Hz)', title_font=dict(size=16),
+                        tickfont=dict(size=16)))
+        fig.add_trace(
+            go.Scatter(x=bins[1:], y=fr_avg, mode='lines', line=dict(color='rgba(255, 0, 0, 0.5)', width=3), yaxis='y2',
+                       showlegend=False))
+
+        fig.update_xaxes(tickfont=dict(size=16))
+        fig.update_yaxes(tickfont=dict(size=16))
+
+        fig.update_layout(title_font_size=18,
+                          xaxis_title="Time (s)",
+                          yaxis_title="Unit",
+                          font=dict(size=16),
+                          xaxis=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          yaxis=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          yaxis2=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          plot_bgcolor='white'
+                          )
+        return fig
+
+    def plot_raster_fr_burst(self):
+        bins, fr_avg = self.two_step_smooth()
+        pop_fr, peak_indices = self.find_peak_loc()
+        duration, burst_values = self.burst_width()
+        rms = np.sqrt(np.mean(pop_fr ** 2))
+        peak_thr = rms * self.rms_scaler
+        bins = bins[1:]
+        fig = go.Figure()
+        y = 0
+        for vv in self.spike_times:
+            fig.add_trace(go.Scatter(x=vv, y=[y] * len(vv), mode='markers',
+                                     marker=dict(symbol='line-ns-open', size=3, color='black', opacity=0.7),
+                                     showlegend=False))
+        y += 1
+
+        fig.update_layout(
+            yaxis2=dict(overlaying='y', side='right', title='Population Firing Rate (Hz)', title_font=dict(size=16),
+                        tickfont=dict(size=16)))
+        fig.add_trace(
+            go.Scatter(x=bins[1:], y=fr_avg, mode='lines', line=dict(color='rgba(255, 0, 0, 0.5)', width=3), yaxis='y2',
+                       showlegend=False))
+        fig.add_trace(
+            go.Scatter(x=bins[peak_indices], y=fr_avg[peak_indices],
+                       mode='markers', marker=dict(symbol='x', size=10, color='red'),
+                       name='Burst Peaks', showlegend=False))
+        # widths = [burst_values[1:][0], burst_values[1:][1], burst_values[1:][2]]
+        fig.add_trace(go.Scatter(x=[bins[burst_values[1][0]], bins[burst_values[1:][1]]],
+                                 y=[burst_values[1:][2], burst_values[1][1]], mode='lines',
+                                 line=dict(color='red', width=3), name='Width'))
+
+        fig.add_trace(go.Scatter(x=bins, y=np.full_like(pop_fr, peak_thr), mode='lines',
+                                 line=dict(color='magenta', width=3), name='Peak Threshold'))
+
+        fig.update_xaxes(tickfont=dict(size=16))
+        fig.update_yaxes(tickfont=dict(size=16))
+
+        fig.update_layout(title_font_size=18,
+                          xaxis_title="Time (s)",
+                          yaxis_title="Unit",
+                          font=dict(size=16),
+                          xaxis=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          yaxis=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          yaxis2=dict(showgrid=True, gridcolor='lightgray', linecolor='black', linewidth=3),
+                          plot_bgcolor='white'
+                          )
+        return fig
+
 
     def plot_map(self):
         """
@@ -102,7 +183,7 @@ class PlotEphys(MaxWellEphys):
         :return: a template figure object
         """
         template = self.neuron_dict[n]['template']
-        xx = np.arange(0, len(template) / self.fs, 1 / self.fs) * 1000  # unit is ms
+        xx = np.arange(0, len(template) / self.fs, 1 / self.fs)  # unit is ms
         fig_temp = px.line(x=xx, y=template, labels={'x': "Time (ms)"})
         fig_temp.update_yaxes(visible=False, showticklabels=False)
         fig_temp.update_layout(font=dict(size=16),
@@ -127,7 +208,7 @@ class PlotEphys(MaxWellEphys):
         match_temp = dict(zip(temp_chs, templates))
         selected_channels, selected_positions = self.select_neighbor_channels(n)
         selected_templates = [match_temp[c] for c in selected_channels]
-        xx = np.arange(0, len(templates[0]) / self.fs, 1 / self.fs) * 1000  # unit is ms
+        xx = np.arange(0, len(templates[0]) / self.fs, 1 / self.fs)  # unit is ms
         # make pos as center, get the subplot's location
         rows, cols = int(nelec * 2 + 1), int(nelec * 2 + 1)
         row_c, col_c = int(nelec + 1), int(nelec + 1)
@@ -161,6 +242,7 @@ class PlotEphys(MaxWellEphys):
         :param n: index to the neurons, range [0, cluster_number]
         :return: a template figure object
         """
+        print(len(self.spike_times))
         isi = np.diff(self.spike_times[n])
         fig_isi = px.histogram(isi, nbins=round(max(isi)))
         fig_isi.update_layout(xaxis_title="Time (ms)", yaxis_title="Count", font=dict(size=16))
@@ -182,7 +264,7 @@ class PlotEphys(MaxWellEphys):
 
         fig_amp = make_subplots(rows=1, cols=2, shared_yaxes="all",
                                 column_widths=[0.8, 0.2], horizontal_spacing=0)
-        fig_amp.add_trace(go.Scatter(x=self.spike_times[n]/1000, y=amps, mode='markers'),
+        fig_amp.add_trace(go.Scatter(x=self.spike_times[n], y=amps, mode='markers'),
                           row=1, col=1)
         fig_amp.add_trace(go.Histogram(y=amps),
                           row=1, col=2)
@@ -193,17 +275,50 @@ class PlotEphys(MaxWellEphys):
         fig_amp.update_xaxes(showline=True, linewidth=1, linecolor='black',
                              title="Time (s)", mirror=True, row=1, col=1)
         fig_amp.update_yaxes(showline=True, linewidth=2, linecolor='black',
-                             title="Voltage("+u"\u03BC"+"V)", mirror=True, row=1, col=1)
+                             title="Voltage(" + u"\u03BC" + "V)", mirror=True, row=1, col=1)
         fig_amp.update_xaxes(showline=True, linewidth=1, linecolor='black', mirror=True, row=1, col=2)
         fig_amp.update_yaxes(showline=True, linewidth=2, linecolor='black', mirror=True, row=1, col=2)
 
         return fig_amp
 
-
-    def plot_corr(self, n, bin_size=1):
+    def plot_ccg(self, n, bin_size=0.001):
         """
         plot cross-correlogram with lag in [-50, 50]ms with 1ms resolution
         :param n:
         :return:
         """
         orginal = self.spike_times[n]
+
+    def plot_footprint_overall(self):
+        """
+        plot footprints on electrode map for all units
+        Returns:
+
+        """
+
+        pass
+
+    def plot_sttc_heatmap(self):
+        coef = self.ephys_data.spike_time_tilings()
+        fig_sttc = px.imshow(coef, text_auto=True, aspect="auto")
+        fig_sttc.update_layout(xaxis_title="Unit", yaxis_title="Unit", font=dict(size=16))
+        return fig_sttc
+
+    def plot_fr_distribution(self):
+        fr = self.ephys_data.rates(unit='kHz')  # 'kHz' is actually Hz because input data is second based
+        fig_fr = px.histogram(fr, nbins=round(max(fr)))
+        fig_fr.update_layout(xaxis_title="Firing Rate (Hz)", yaxis_title="Count", font=dict(size=16))
+        fig_fr.update_layout(xaxis_range=[0, 10])
+        fig_fr.update_layout(showlegend=False,
+                             margin=dict(b=0, l=0, r=0, t=0),
+                             plot_bgcolor=self.colors['background'],
+                             paper_bgcolor=self.colors['background']
+                             )
+        return fig_fr
+
+    def plot_ibi(self):
+        """
+        plot inter burst interval if there is any burst
+        Returns:
+
+        """

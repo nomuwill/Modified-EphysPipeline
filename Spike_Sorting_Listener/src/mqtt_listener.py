@@ -14,7 +14,7 @@ import json
 
 LOCAL_CSV = "csv/"
 JOB_PREFIX = "edp-"
-TOPIC = ["services/csv_job", "experiment/upload", "telemetry/+/log/experiments/upload"]
+TOPIC = ["services/csv_job", "experiments/upload", "telemetry/+/log/experiments/upload"]
 LOG_FILE_NAME = "listener.log"
 LOG_PATH = "s3://braingeneers/services/mqtt_job_listener/" + LOG_FILE_NAME
 
@@ -50,6 +50,10 @@ class JobMessage:
             stitch = self.message.get('stitch')
         else:
             stitch = False
+        if "overwrite" in self.message:
+            overwrite = self.message.get('overwrite')
+        else:
+            overwrite = False
         # Loop over ephys_experiments
         if not stitch or stitch in ["False", "false"]:
             logging.info(f"stitch is {stitch}, loop over experiments...")
@@ -68,7 +72,10 @@ class JobMessage:
                         result_path = posixpath.join(s3_base, uuid, "derived/kilosort2",
                                                      exp + "_phy.zip")
                     logging.info(f"Result path: {result_path}")
-                    if not check_exist(result_path):
+                    if overwrite:
+                        create_sort(exp, file_path)
+                        logging.info(f"Overwrite sorting result because overwrite is {overwrite}")
+                    elif not check_exist(result_path):
                         create_sort(exp, file_path)
                     else:
                         logging.info(f"Sorting result exists. Moving on to next experiment... ")
@@ -85,9 +92,13 @@ class JobMessage:
         if "update" in self.message:
             update = self.message.get("update")
             if bool(update):
+                logging.info(f"Message to update {csv_path}")
                 for k, v in update.items():
-                    run_job_from_csv(csv_path=csv_path, update_info=k, job_index=v)
-            logging.info(f"Found 'update' in message, done processing {csv_path}")
+                    res = run_job_from_csv(csv_path=csv_path, update_info=k, job_index=v)
+                    if res == -1:
+                        logging.error(f"{csv_path} does not exist. Discard message. ")
+                    else:
+                        logging.info(f"Done processing {k, v}")
 
         if "refresh" in self.message:
             refresh = self.message.get("refresh")
@@ -107,9 +118,12 @@ def get_csv_name(csv_path):
 
 
 def download_csv(csv_path):
-    csv_file = get_csv_name(csv_path)
-    wr.download(csv_path, os.path.join(LOCAL_CSV, csv_file))
-    return csv_file
+    if wr.does_object_exist(csv_path):
+        csv_file = get_csv_name(csv_path)
+        wr.download(csv_path, os.path.join(LOCAL_CSV, csv_file))
+        return csv_file
+    else:
+        return None
 
 
 def upload_csv(csv_path):
@@ -150,6 +164,9 @@ def run_job_from_csv(csv_path, update_info, job_index):
         logging.info(f"Found a local csv.")
         csv_file = get_csv_name(csv_path)
 
+    if csv_file is None:
+        return -1
+
     new_rows_list = []
     with open(f"{LOCAL_CSV}{csv_file}", 'r') as file1:
         reader = csv.DictReader(file1)
@@ -176,6 +193,7 @@ def run_job_from_csv(csv_path, update_info, job_index):
         writer = csv.DictWriter(file2, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(new_rows_list)
+    return csv_file
 
 
 def launch_job_csv(csv_file, csv_row):

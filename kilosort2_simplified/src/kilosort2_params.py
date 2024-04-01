@@ -2,12 +2,10 @@ import numpy as np
 import spikeinterface.extractors as se
 
 # List of data files you want to spike sort
-rec_file = "/project/SpikeSorting/Trace.h5"
-
+rec_file = "/project/SpikeSorting/Trace"
 
 # List of intermediate folders where tmp and output files are saved
 inter_folder = "/project/SpikeSorting/inter"
-
 
 # # List of output folders where final matlab files are saved.
 # # Matlab files will have the same name as recording files but will end with _sorted.mat

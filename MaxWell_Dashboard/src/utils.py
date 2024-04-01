@@ -1,12 +1,13 @@
 import braingeneers.utils.s3wrangler as wr
-from braingeneers.iot import messaging
-import uuid as uuidgen
+
 import braingeneers.utils.smart_open_braingeneers as smart_open
 from tenacity import retry, stop_after_attempt
 import os
 import csv
 from values import *
 import time
+
+# TODO: change print to logging
 
 
 @retry(stop=stop_after_attempt(5))
@@ -32,7 +33,8 @@ def mqtt_start_job(csv_path, job_index):
     mb = messaging.MessageBroker(str(uuidgen.uuid4()))
     topic = "services/csv_job"
     message = {"csv": csv_path,
-               "update": {"Start": job_index}
+               "update": {"Start": job_index},
+               "refresh": False
                }
     try:
         mb.publish_message(topic=topic, message=message, confirm_receipt=True)

@@ -62,7 +62,10 @@ class edpScanner:
                 if pname.startswith(self.job_prefix):
                     sts = pod.status.phase
                     img = pod.spec.containers[0].image
-                    jtype = self.job_lookup[img]
+                    if img in self.job_lookup:
+                        jtype = self.job_lookup[img]
+                    else:
+                        jtype = "unknown"
                     if pname not in self.status_table:
                         self.status_table[pname] = {"job_type": jtype, 
                                                     "data_path": parse_data_path(pod),
@@ -76,8 +79,11 @@ class edpScanner:
                         start_ts_str = convert_time(start_timestamp)
                         self.status_table[pname]["start_time"] = start_ts_str
                     if sts in FINISH_FLAGS:
+                        start_timestamp = pod.status.start_time  
+                        start_ts_str = convert_time(start_timestamp)
                         end_timestamp = pod.status.conditions[1].last_transition_time  
                         end_ts_str = convert_time(end_timestamp)
+                        self.status_table[pname]["start_time"] = start_ts_str
                         self.status_table[pname]["end_time"] = end_ts_str
                             
             self.update_status_to_slack()

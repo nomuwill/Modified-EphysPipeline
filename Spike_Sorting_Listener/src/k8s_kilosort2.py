@@ -2,7 +2,6 @@ from kubernetes import client, config
 import os
 import logging
 
-## use my personal bucket for testing
 DEFAULT_S3_BUCKET = "s3://braingeneers/ephys/"
 
 

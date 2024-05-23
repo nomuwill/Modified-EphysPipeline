@@ -15,8 +15,10 @@ import json
 LOCAL_CSV = "csv/"
 JOB_PREFIX = "edp-"
 TOPIC = ["services/csv_job", "experiments/upload", "telemetry/+/log/experiments/upload"]
+TO_SLACK_TOPIC = "telemetry/slack/TOSLACK/ephys-data-pipeline"
 LOG_FILE_NAME = "listener.log"
 LOG_PATH = "s3://braingeneers/services/mqtt_job_listener/" + LOG_FILE_NAME
+DEFAULT_S3_BUCKET = "s3://braingeneers/ephys/"
 
 # setup logging
 stream_handler = logging.StreamHandler()
@@ -221,6 +223,14 @@ def create_kube_job(job_name, job_info):
             logging.info(f"Remove the inactiva old job and create a new one")
             time.sleep(1)
             resp = newJob.create_job()
+    if resp == -1:
+        # send message to slack 
+        message_slack(job_name, job_info, message_text="Error creating job")
+        logging.error(f"Error creating {job_name}. Err message {resp}")  # TODO: catch error message...
+    else:
+        # send message to slack
+        message_slack(job_name, job_info, message_text="Job created")
+        logging.info(f"Job {job_name} created")
     return resp
 
 
@@ -295,10 +305,14 @@ def create_sort(experiment, file_path):
     job_info["file_path"] = file_path
     job_name = format_job_name(experiment)
     resp = create_kube_job(job_name, job_info)
-    if resp == -1:
-        logging.error(f"Error creating {job_name}. Err message {resp}")  # TODO: catch error message...
-    else:
-        logging.info(f"Job {job_name} created")
+    # if resp == -1:
+    #     # send message to slack 
+    #     message_slack(job_name, job_info, message_text="Error creating job")
+    #     logging.error(f"Error creating {job_name}. Err message {resp}")  # TODO: catch error message...
+    # else:
+    #     # send message to slack
+    #     message_slack(job_name, job_info, message_text="Job created")
+    #     logging.info(f"Job {job_name} created")
 
 
 def start_listening():
@@ -317,6 +331,68 @@ def start_listening():
     except Exception as err:
         do_logging(f"RED ALARM! Service Down. Error message: {err}", "error")
 
+def message_slack(job_name, job_info, message_text):
+    with open("job_type_table.json", "r") as f:
+        job_lookup = json.load(f)
+    if "file_path" in job_info:
+        s3_path = job_info["file_path"]
+    else:
+        if job_info["uuid"].startswith("s3"):
+            s3_path = os.path.join(job_info["uuid"],
+                                    "original/data",
+                                    job_info["experiment"])
+        else:
+            s3_path = os.path.join(DEFAULT_S3_BUCKET,
+                                    job_info["uuid"],
+                                    "original/data",
+                                    job_info["experiment"])
+    img = job_info["image"]
+    if img in job_lookup:
+        job_type = job_lookup[img]
+    else:
+        job_type = "Unknown"
+
+    slack_message = {
+        "NRP Job": job_name,
+        "Data Path": s3_path,
+        "Job": job_type,
+        "Status": message_text
+    }
+    slack_message_text = format_dict_textarea(slack_message)
+    message={"message": slack_message_text}
+    mb = messaging.MessageBroker(str(uuidgen.uuid4()))
+    mb.publish_message(topic=TO_SLACK_TOPIC, 
+                       message=message, 
+                       confirm_receipt=True)
+    logging.info(f"Sent {message} to Slack channel {TO_SLACK_TOPIC}")
+    time.sleep(.01)
+
+def format_dict_textarea(input_dict):
+    """
+    format dictionary to string with indent for textarea
+    :param input_dict:
+    :return:
+    """
+    global out_str
+    out_str = ""
+
+    def walk_dict(d, depth=0):
+        global out_str
+        if isinstance(d, dict):
+            for k, v in d.items():
+                if isinstance(v, dict):
+                    if depth == 0:
+                        out_str += "".join(["*", "\t"*depth, str(k), "*", ": ", "\n"])
+                    else:
+                        # out_str += "".join(["> ", "\t"*depth, str(k), ": ", "\n"])
+                        out_str += "".join(["> ", str(k), ": ", "\n"])
+                    walk_dict(v, depth + 1)
+                else:
+                    out_str += "".join(["\t" * depth, str(k), ": ", str(v), "\n"])
+                    walk_dict(v, depth)
+
+    walk_dict(input_dict)
+    return out_str
 
 if __name__ == "__main__":
     start_listening()

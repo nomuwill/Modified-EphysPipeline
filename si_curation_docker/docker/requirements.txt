@@ -5,3 +5,4 @@ tbb
 h5py
 scipy
 glances
+json

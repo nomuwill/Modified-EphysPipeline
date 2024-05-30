@@ -3,7 +3,7 @@ import os
 import logging
 
 DEFAULT_S3_BUCKET = "s3://braingeneers/ephys/"
-
+PARAMETER_BUCKET = "s3://braingeneers/services/mqtt_job_listener/params"
 
 class Kube:
     def __init__(self, job_name: str, job_info: dict, namespace='braingeneers'):
@@ -24,9 +24,10 @@ class Kube:
                                        job_info["uuid"],
                                        "original/data",
                                        job_info["experiment"])
-
-        logging.info(f"create job for {s3_path}")
-        self.args = f"{job_info['args']} {s3_path}"
+        params_path = f"{PARAMETER_BUCKET}/{job_info['params']}"
+        logging.info(f"Creating a job for {s3_path} with parameters {params_path}")
+        self.args = f"{job_info['args']} {s3_path} {params_path}"
+        
         self.resources = {"cpu": str(self.job_info["cpu_request"]),
                           "memory": str(self.job_info["memory_request"]) + "Gi",
                           "ephemeral-storage": str(self.job_info["disk_request"]) + "Gi",

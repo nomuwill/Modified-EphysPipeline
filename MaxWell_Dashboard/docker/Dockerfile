@@ -21,3 +21,5 @@ CMD ["gunicorn", "--timeout", "1000", "--workers=1","-b", "0.0.0.0:8050", "--rel
 
 COPY src/ /app
 WORKDIR /app
+
+# surygeng/maxwell_dashboard:v0.1

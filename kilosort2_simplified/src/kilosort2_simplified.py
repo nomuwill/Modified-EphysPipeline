@@ -18,6 +18,10 @@ import shutil
 FORMAT_LIST = ["Maxwell", "mearec", "nwb"]
 data_format = None
 
+# TODO: Fix this mearec error 
+# assert filename.suffix in [".h5", ".hdf5"], "Provide an .h5 or .hdf5 file name"
+# AssertionError: Provide an .h5 or .hdf5 file name
+
 # setup logging
 def setup_logging(log_file):
     stream_handler = logging.StreamHandler()
@@ -129,6 +133,9 @@ def extract_recording(rec_path, output_folder, format):
         logging.error(f"Data format not supported. Data format should be in {FORMAT_LIST}")
         return -1
     if format == "mearec":
+        # rename the recording file to .h5
+        os.rename(rec_path, rec_path + ".h5")
+        rec_path = rec_path + ".h5"
         mr.convert_recording_to_new_version(rec_path)
         rec, _ = se.read_mearec(rec_path)
     elif format == "Maxwell":
@@ -165,7 +172,7 @@ if __name__ == "__main__":
             data_format = metadata["ephys_experiments"][experiment]["data_format"]
         if not data_format:
             data_format = "Maxwell"  # a patch for the old metadata.json
-            
+    
     rec_filtered = extract_recording(rec_path=rec_file, output_folder=output_folder, format=data_format)
     if rec_filtered == -1:
         logging.error("Error: Recording not readable.")

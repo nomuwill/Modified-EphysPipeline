@@ -14,6 +14,7 @@ import braingeneers.utils.s3wrangler as wr
 from utils import *
 import logging
 import h5py
+import json
 
 # BUCKET = "s3://braingeneers/ephys/"
 JOB_KWARGS = dict(n_jobs=10, progress_bar=True)
@@ -26,14 +27,18 @@ logging.basicConfig(level=logging.INFO,
                     handlers=[logging.FileHandler(LOG_FILE_NAME, mode="a"),
                               stream_handler])
 
+DEFUALT_PARAMS = {"min_snr": 5,
+                  "min_fr": 0.1,
+                  "max_isi_viol": 0.2}
+
 class QualityMetrics:
     """
     curation by quality metrics using spikeinterface API
 
     """
 
-    def __init__(self, base_folder, rec_name, phy_folder,
-                 min_snr=5, min_fr=0.1, max_isi_viol=0.2,
+    def __init__(self, base_folder, rec_name, phy_folder, params_dict={},
+                 max_spikes_waveform=500,
                  default=True):
         self.redundant_pairs = None
         self.extract_path = None
@@ -42,12 +47,23 @@ class QualityMetrics:
         self.clean_folder = posixpath.join(base_folder, "cleaned_waveforms")
         phy_result = se.KiloSortSortingExtractor(phy_folder)
         self.phy_result = phy_result.remove_empty_units()
-        self._snr_thres = min_snr
-        self._fr_thres = min_fr
-        self._isi_viol_thres = max_isi_viol
-        self.we = self.extract_waveforms(max_spikes=500)
+        if "min_snr" in params_dict:
+            self._snr_thres = params_dict["min_snr"]
+        else:
+            self._snr_thres = DEFUALT_PARAMS["min_snr"]
+        if "min_fr" in params_dict:
+            self._fr_thres = params_dict["min_fr"]
+        else:
+            self._fr_thres = DEFUALT_PARAMS["min_fr"]
+        if "max_isi_viol" in params_dict:
+            self._isi_viol_thres = params_dict["max_isi_viol"]
+        else:
+            self._isi_viol_thres = DEFUALT_PARAMS["max_isi_viol"]
+        
+        # extract waveforms
+        self.we = self.extract_waveforms(max_spikes=max_spikes_waveform)
         print("waveforms", self.we)
-        if default:
+        if default:  # to leave space for other curation methods
             self.curated_ids, self.all_remove_ids = self.default_curation()
 
         logging.info("Saving cleaned units...")
@@ -277,13 +293,18 @@ def parse_uuid(data_path):
     return base_path, phy_path
 
 if __name__ == "__main__":
-    # test data: s3://braingeneers/ephys/2023-03-13-e-umass-Pak_ASD_Pair_1/original/data/14170_C3141a_d56_Tri.h5
-
-    data_path = sys.argv[1]
+    # test data: s3://braingeneers/ephys/2024-01-05-e-uploader-test/original/data/test_0.raw.h5 
+    # test parameter: s3://braingeneers/services/mqtt_job_listener/params/curation/params_1.json
+    
+    input_str = sys.argv[1]
+    data_path = input_str.split(" ")[0]
+    param_path = input_str.split(" ")[1]
+ 
     s3_base_path, phy_path = parse_uuid(data_path=data_path)
     print(f"s3 path: {data_path}")  # original recording s3 full path
     print(f"s3 base: {s3_base_path}")
     print(f"phy path: {phy_path}")
+    print(f"param file path: {param_path}")
 
     # download file from s3
     current_folder = os.getcwd()
@@ -296,25 +317,44 @@ if __name__ == "__main__":
     extract_dir = base_folder + "/kilosort_result"
     kilosort_local_path = posixpath.join(base_folder, "kilosort_result.zip")
 
-    for p in [phy_path, data_path]:
+    for p in [phy_path, data_path, param_path]:
         try:
             assert wr.does_object_exist(p)
         except AssertionError as err:
-            logging.exception(f"Data doesn't exist! {p}")
+            logging.exception(f"File doesn't exist on S3! {p}")
             raise err
 
+    # download phy.zip
     logging.info("Start downloading kilosort result ...")
     wr.download(phy_path, kilosort_local_path)
     logging.info("Done!")
 
     shutil.unpack_archive(kilosort_local_path, extract_dir, "zip")
 
+    # download raw data
     logging.info("Start downloading raw data ...")
     experiment = "rec.raw.h5"
     wr.download(data_path, posixpath.join(base_folder, experiment))
     logging.info("Done")
 
-    curation = QualityMetrics(base_folder=base_folder, rec_name=experiment, phy_folder=extract_dir)
+    # download param file
+    logging.info("Start downloading param file ...")
+    param_file = posixpath.join(base_folder, "params.json")
+    wr.download(param_path, param_file)
+    logging.info("Done")
+    with open(param_file, "r") as f:
+        params_dict = json.load(f)
+    
+    if len(params_dict) > 0:
+        logging.info(f"Use parameters {params_dict} from file {param_path} for curation")
+    else:
+        logging.info(f"No user parameters found. Use default parameters {DEFUALT_PARAMS} for curation")
+
+    # do curation
+    curation = QualityMetrics(base_folder=base_folder, 
+                              rec_name=experiment, 
+                              phy_folder=extract_dir,
+                              params_dict=params_dict)
     qm_file, wf_file = curation.package_cleaned()
 
     # curated_file = experiment + "_qm.zip"

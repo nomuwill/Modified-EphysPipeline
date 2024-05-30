@@ -135,7 +135,7 @@ class Network:
                 if latency >= -self.func_latency and latency <= self.func_latency:
                     if max_ind != np.diff(self.ccg_win)//2:
                         ccg_smth = gaussian_filter1d(counts, sigma=10)   
-                        # ccg_smth = utils.hollow_gaussian_filter(counts, sigma=10) 
+                        ccg_smth = utils.hollow_gaussian_filter(counts, sigma=10) 
                         lambda_slow_peak = ccg_smth[max_ind]
                         ccg_peak = int(counts[max_ind])
                         # estimate p_fast

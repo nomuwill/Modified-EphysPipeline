@@ -31,6 +31,8 @@ def create_message(uuid, exp_list, ow=False):
         exp_dataset = exp.split("/original/data/")[1]
         if exp_dataset.endswith(".raw.h5"):
             exp_name = exp_dataset.split(".raw.h5")[0]
+        elif exp_dataset.endswith(".h5"):
+            exp_name = exp_dataset.split(".h5")[0]
         else:
             exp_name = exp_dataset
         experiments[exp_name] = {"blocks": [{"path": f"original/data/{exp_dataset}"}]}

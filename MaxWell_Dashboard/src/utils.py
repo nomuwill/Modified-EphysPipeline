@@ -137,6 +137,20 @@ def format_dict_textarea(input_dict):
     walk_dict(input_dict)
     return out_str
 
+def readable_keys(input_dict):
+    readable_dict = {}
+    for k, v in input_dict.items():
+        if k in CONVERT_TO_READABLE:
+            k = CONVERT_TO_READABLE[k]
+        readable_dict[k] = v
+    print(readable_dict)
+    return readable_dict
+
+def convert_to_json_key(param_name):
+    if param_name in CONVERT_TO_JSON:
+        return CONVERT_TO_JSON[param_name]
+    else:
+        return param_name
 
 def filter_dropdown(search_value=None):
     print("search_value:", search_value)

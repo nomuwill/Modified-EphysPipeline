@@ -4,11 +4,19 @@
 import dash
 from dash import Dash, html, dcc, callback
 import dash_bootstrap_components as dbc
+import dash_auth
 
 # TODO: set better page titles
-# TODO: add user and password
+
+VALID_USERNAME_PASSWORD_PAIRS = [
+    ['organoid', 'electrophysiology']
+]
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.SIMPLEX])
+auth = dash_auth.BasicAuth(
+    app,
+    VALID_USERNAME_PASSWORD_PAIRS
+)
 # server = app.server
 app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True

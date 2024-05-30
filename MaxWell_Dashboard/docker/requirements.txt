@@ -6,6 +6,7 @@ numpy
 dash_daq
 scipy
 dash_bootstrap_components
+dash-auth
 kubernetes
 deprecated
 uuid

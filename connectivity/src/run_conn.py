@@ -9,6 +9,14 @@ import shutil
 import braingeneers.utils.s3wrangler as wr
 from braingeneers import analysis
 import matplotlib.pyplot as plt
+import json
+
+DEFAULT_PARAMS = {
+    "binary_bin_size": 0.001,
+    "ccg_win": 50,
+    "func_latency": 5,
+    "p_test": 0.00001
+}
 
 # TODO: add auto corelation analysis and save to a seperate folder.
 
@@ -27,10 +35,11 @@ def setup_logging(log_file):
                         handlers=[logging.FileHandler(log_file, mode="a"),
                                   stream_handler])
 
-def parse_s3_path(data_path):
+def parse_s3_path(data_path, param_file_name):
     buckets = ["derived/kilosort2", "derived/pipeline"]
     ending = data_path.split("_")[-1]
-    save_to = data_path.replace(ending, SUFFIX)
+    param_name = param_file_name.split(".")[0]
+    save_to = data_path.replace(ending, f"{param_name}_{SUFFIX}")
     for b in buckets:
         if b in data_path:
             save_to = save_to.replace(b, OUTPUT_BUCKET)
@@ -46,26 +55,14 @@ def upload_file(phy_path, local_file):
 
 
 if __name__ == "__main__":
-    # test data: s3://braingeneers/integrated/2023-09-16-efi-mouse-5plex-official/ephys/derived/pipeline/19894/2023-09-23-T070000-chip19894_acqm.zip
-    # change input to original/data/recording.raw.h5
+    # input_str = sys.argv[1:]
+    # print("Start ... ")
+    # print(f"Input string: {input_str}")
+    # logging.info(f"Input string: {input_str}")
     rec_path = sys.argv[1]
-    data_path = rec_path.replace("original/data", "derived/kilosort2")
-    if data_path.endswith(".raw.h5.raw.h5"):
-        data_path = data_path.replace(".raw.h5.raw.h5", "_acqm.zip")
-    elif data_path.endswith(".raw.h5"):
-        data_path = data_path.replace(".raw.h5", "_acqm.zip")
-    elif data_path.endswith(".h5"):
-        data_path = data_path.replace(".h5", "_acqm.zip")
-    else:
-        logging.error(f"Recording is not a MaxWell h5 file: {rec_path}")
-        logging.error(f"Exit")
-        sys.exit(1)
+    param_path = sys.argv[2]
+    param_file_name = param_path.split("/")[-1]
 
-    if not wr.does_object_exist(data_path):
-        logging.exception(f"Data doesn't exist! Check the path: {data_path}")
-        sys.exit(1)
-
-    figure_name = data_path.split("/")[-1].replace(".zip", "")
     # download file from s3 to data folder
     current_folder = os.getcwd()  # python scripts are in this folder, so create subfolder for data
     data_subfolder = "/data"
@@ -85,19 +82,64 @@ if __name__ == "__main__":
     log_file = os.path.join(extract_dir, LOG_FILE_NAME)
     setup_logging(log_file)
 
-    save_to_path = parse_s3_path(data_path=data_path)
+    logging.info(f"Start running connectivity analysis for {rec_path} with parameter {param_path} ...")
+
+    data_path = rec_path.replace("original/data", "derived/kilosort2")
+    if data_path.endswith(".raw.h5.raw.h5"):
+        data_path = data_path.replace(".raw.h5.raw.h5", "_acqm.zip")
+    elif data_path.endswith(".raw.h5"):
+        data_path = data_path.replace(".raw.h5", "_acqm.zip")
+    elif data_path.endswith(".h5"):
+        data_path = data_path.replace(".h5", "_acqm.zip")
+    else:
+        logging.error(f"Recording is not a MaxWell h5 file: {rec_path}")
+        logging.error(f"Exit")
+        sys.exit(1)
+
+    if not wr.does_object_exist(data_path):
+        logging.exception(f"Data doesn't exist! Check the path: {data_path}")
+        sys.exit(1)
+
+    if not wr.does_object_exist(param_path):
+        logging.exception(f"Data doesn't exist! Check the path: {param_path}")
+        sys.exit(1)
+
+    figure_name = data_path.split("/")[-1].replace(".zip", "")
+
+    save_to_path = parse_s3_path(data_path=data_path, param_file_name=param_file_name)
     logging.info(f"Run connectivity analysis ...")
     logging.info(f"Download data from: {data_path}") 
+    logging.info(f"Download parameter from: {param_path}")
     logging.info(f"Result will be saved to: {save_to_path}")
 
     acqm_local_path = posixpath.join(data_folder, "acqm.zip")   # use auto curation data   
     logging.info(f"Start downloading single unit data to local {acqm_local_path} ...")
     wr.download(data_path, acqm_local_path)
     logging.info("Done!")
+    param_local_path = posixpath.join(data_folder, param_file_name) 
+    logging.info(f"Start downloading parameter file to local {param_local_path} ...")
+    wr.download(param_path, param_local_path)
+
+    # read parameters
+    with open(param_local_path, "r") as f:
+        params = json.load(f)
+    logging.info(f"Parameters for running functional connectivity: {params}")
+
+    for k, v in DEFAULT_PARAMS.items():
+        if k not in params:
+            params[k] = v
+    # save parameter to extract folder so that it's packaged with the results
+    with open(f"{extract_dir}/params.json", "w") as f:
+        json.dump(params, f)
 
     # read the data and run the analysis
     train, neuron_data, _, fs = utils.load_curation(acqm_local_path)
-    ccg_test = Network({"train":train, "neuron_data":neuron_data}, verbose=False)
+    ccg_test = Network({"train":train, "neuron_data":neuron_data}, 
+                       binary_bin_size=params["binary_bin_size"], 
+                       ccg_win=params["ccg_win"], 
+                       func_latency=params["func_latency"], 
+                       func_prob=params["p_test"],
+                       verbose=False)
     sd = analysis.SpikeData(train, neuron_data={0: neuron_data})
     func_pairs = {}
     for (i, j), value in ccg_test.functional_pair():

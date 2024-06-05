@@ -24,9 +24,13 @@ class Kube:
                                        job_info["uuid"],
                                        "original/data",
                                        job_info["experiment"])
-        params_path = f"{PARAMETER_BUCKET}/{job_info['params']}"
-        logging.info(f"Creating a job for {s3_path} with parameters {params_path}")
-        self.args = f"{job_info['args']} {s3_path} {params_path}"
+        if "params" in job_info:
+            params_path = f"{PARAMETER_BUCKET}/{job_info['params']}"
+            logging.info(f"Creating a job for {s3_path} with parameters {params_path}")
+            self.args = f"{job_info['args']} {s3_path} {params_path}"
+        else:
+            logging.info(f"Creating a job for {s3_path} without parameters")
+            self.args = f"{job_info['args']} {s3_path}"
         
         self.resources = {"cpu": str(self.job_info["cpu_request"]),
                           "memory": str(self.job_info["memory_request"]) + "Gi",

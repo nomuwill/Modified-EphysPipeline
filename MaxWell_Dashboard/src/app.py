@@ -5,6 +5,7 @@ import dash
 from dash import Dash, html, dcc, callback
 import dash_bootstrap_components as dbc
 import dash_auth
+import os
 
 # TODO: set better page titles
 
@@ -13,11 +14,12 @@ VALID_USERNAME_PASSWORD_PAIRS = [
 ]
 
 app = Dash(__name__, use_pages=True, external_stylesheets=[dbc.themes.SIMPLEX])
+app.server.secret_key = os.urandom(24)
 auth = dash_auth.BasicAuth(
     app,
     VALID_USERNAME_PASSWORD_PAIRS
 )
-# server = app.server
+server = app.server
 app.css.config.serve_locally = True
 app.scripts.config.serve_locally = True
 

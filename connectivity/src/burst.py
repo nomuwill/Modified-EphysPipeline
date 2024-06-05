@@ -11,7 +11,7 @@ class Network:
                  smooth_bin=0.001,
                  rms_scaler=2, burst_edge=0.9,
                  before_peak_s=0.25, after_peak_s=0.5, between_bursts=0.8,
-                 binary_bin_size=0.001, ccg_win=[-50, 50], func_latency=5, func_prob=0.00001,
+                 binary_bin_size=0.001, ccg_win=50, func_latency=5, func_prob=0.00001,
                  verbose=True, unit="s"):
         """
         rms_scaler: burst peak threshold = fr_rms * rms_scalar
@@ -36,7 +36,7 @@ class Network:
         self.num_burst = None
         self.binary_bin_size = binary_bin_size
         self.peak_thr = 0
-        self.ccg_win = ccg_win
+        self.ccg_window = [-ccg_win, ccg_win]
         self.func_latency = func_latency
         self.func_prob = func_prob
         self.verbose = verbose
@@ -129,11 +129,11 @@ class Network:
             for j in range(i+1, self.unit_count):
                 counts, lags = utils.ccg(self.sparse_train[i],
                              self.sparse_train[j],
-                             ccg_win=self.ccg_win)
+                             ccg_win=self.ccg_window)
                 max_ind = np.argmax(counts)
                 latency = lags[max_ind]
                 if latency >= -self.func_latency and latency <= self.func_latency:
-                    if max_ind != np.diff(self.ccg_win)//2:
+                    if max_ind != np.diff(self.ccg_window)//2:
                         ccg_smth = gaussian_filter1d(counts, sigma=10)   
                         ccg_smth = utils.hollow_gaussian_filter(counts, sigma=10) 
                         lambda_slow_peak = ccg_smth[max_ind]

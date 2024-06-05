@@ -27,7 +27,7 @@ def upload_to_s3(file, s3_path):
         return None
     except Exception as err:
         print(err)
-        return "Uploading file to s3 failed, please try later"
+        return f"Uploading file to s3 failed, please try later. {err}"
 
 
 def mqtt_start_job(csv_path, job_index):

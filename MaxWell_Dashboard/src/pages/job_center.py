@@ -268,6 +268,8 @@ def update_job_table_recs(n_clicks, recs, jobs, uuid, rows, param_rows):
                 else:
                     job_info["params"] = f"{param_label}/default"    # TODO: make a default parameter file for each job
                 for h, value in DEFAULT_JOBS["chained"][j].items():
+                    if h == "param_label":
+                        continue
                     job_info[h] = value
                     if j_ind < len(jobs)-1:
                         job_info["next_job"] = int(job_info["index"]+1)

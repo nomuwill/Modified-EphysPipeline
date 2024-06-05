@@ -22,8 +22,9 @@ DEFAULT_S3_BUCKET = "s3://braingeneers/ephys/"
 
 # setup logging
 stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-logging.basicConfig(level=logging.INFO,
+# stream_handler.setLevel(logging.INFO)
+stream_handler.setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(message)s',
                     handlers=[logging.FileHandler(LOG_FILE_NAME, mode="a"),
                               stream_handler])

@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: edp-alg-connectivity-3
+  name: sjg-alg-connectivity-param-1
 spec:
   backoffLimit: 2
   template:
@@ -26,89 +26,22 @@ spec:
         command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
         args:
           - >-
-            python run_conn.py s3://braingeneers/integrated/2023-09-16-efi-mouse-5plex-official/ephys/original/data/19894/2023-09-23-T070000-chip19894.raw.h5
+            python run_conn.py s3://braingeneers/ephys/2023-12-03-e-Hc112823_avv9hckcr1/original/data/Hc112823_avv9hckcr1_21841_120323_0.raw.h5 s3://braingeneers/services/mqtt_job_listener/params/connectivity/params_1.json
         env:
           - name: "PYTHONUNBUFFERED"
             value: "true"
 
           # Ceph (internal)
           - name: "ENDPOINT_URL"
-            # value: "http://rook-ceph-rgw-nautiluss3.rook"  # ceph internal
             value: "https://s3.braingeneers.gi.ucsc.edu"  # ceph external
           - name: "S3_ENDPOINT"
-            # value: "rook-ceph-rgw-nautiluss3.rook" # ceph internal
             value: "s3.braingeneers.gi.ucsc.edu" # ceph external
 
         volumeMounts:
-
           # Ceph credentials
           - name: "prp-s3-credentials"
             mountPath: "/root/.aws/credentials"
             subPath: "credentials"
-#          - name: "prp-s3-credentials"
-#            mountPath: "/root/.s3cfg"
-#            subPath: ".s3cfg"
-#
-#          # kube config
-#          - name: "kube-config"
-#            mountPath: "/root/.kube"
-#          # SystemV shared memory
-#          - name: "dshm"
-#            mountPath: "/dev/shm"
-
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              # GPU runs only
-              # - key: nvidia.com/gpu.product
-              #   operator: In
-              #   values:
-              #     # - NVIDIA-RTX-A10
-              #     # - NVIDIA-A100-SXM4-80GB
-              #     # - NVIDIA-GeForce-RTX-2080-Ti
-              #     # - NVIDIA-GeForce-RTX-3090
-              #     - NVIDIA-GeForce-GTX-1080-Ti
-                  # - NVIDIA-GeForce-GTX-1080
-                  # - NVIDIA-RTX-A4000
-#                  - TITANRTX
-#                  - titan-xp
-#                  - M4000
-#                  - V100
-#              - key: gpu-type
-#                operator: NotIn
-#                values:
-#                - A40
-#                - A100
-#                - K40
-#                - M4000
-#              # Host blacklist
-              # - key: kubernetes.io/hostname
-              #   operator: In
-              #   values:
-              #     - gpu-01.nrp.mghpcc.org
-              #     - gpu-02.nrp.mghpcc.org
-              #     - gpu-03.nrp.mghpcc.org
-              #     - gpu-04.nrp.mghpcc.org
-              #     - gpu-05.nrp.mghpcc.org
-              #     - gpu-06.nrp.mghpcc.org
-              #     - gpu-07.nrp.mghpcc.org
-              #     - gpu-08.nrp.mghpcc.org
-              #     - gpu-09.nrp.mghpcc.org
-              #     - gpu-10.nrp.mghpcc.org
-              #     - gpu-11.nrp.mghpcc.org
-              #     - gpu-12.nrp.mghpcc.org
-              #     - gpu-13.nrp.mghpcc.org
-              #     - gpu-14.nrp.mghpcc.org
-              #     - gpu-15.nrp.mghpcc.org
-              #     - gpu-16.nrp.mghpcc.org
-              #     - gpu-17.nrp.mghpcc.org
-              #     - gpu-18.nrp.mghpcc.org
-              # - key: "feature.node.kubernetes.io/cpu-cpuid.AVX"
-              #   operator: In
-              #   values:
-              #     - "true"
 
       restartPolicy: Never
       volumes:
@@ -119,10 +52,3 @@ spec:
         - name: ephemeral
           emptyDir: {}
 
-#        - name: kube-config
-#          secret:
-#            secretName: kube-config
-#        # Shared memory (necessary for Python's multiprocessing.shared_memory module to work)
-#        - name: dshm
-#          emptyDir:
-#            medium: Memory

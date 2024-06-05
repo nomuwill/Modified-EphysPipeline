@@ -8,7 +8,24 @@ from scipy.sparse import csr_array
 import logging
 from deprecation import deprecated
 import math
+import json
 
+
+DEFAULT_PARAM_LIST = {
+    "min_snr": 5, 
+    "min_fr": 0.1,
+    "max_isi_viol": 0.2
+}
+# bin_size=0.05, win=5, avg=False, win_tiling=0.02,
+# gaussian=True, sigma=5, burst_rms_thr=3
+
+def load_paramter(parameter_path):
+    with open(parameter_path, 'r') as f:
+        params = json.load(f)
+    for k, v in DEFAULT_PARAM_LIST.items():
+        if k not in params:
+            params[k] = v
+    return params
 
 def sort_template_amplitude(template):
     """

@@ -161,6 +161,7 @@ if __name__ == "__main__":
     # get format from metadata
     experiment = sys.argv[1]
     metadata_path = "/project/SpikeSorting/metadata.json"
+    parameter_path = "/project/SpikeSorting/parameters.json"
     if not os.path.isfile(metadata_path):
         logging.error("Error: metadata.json not available. Data format default to Maxwell.")
         data_format = "Maxwell"
@@ -172,7 +173,11 @@ if __name__ == "__main__":
             data_format = metadata["ephys_experiments"][experiment]["data_format"]
         if not data_format:
             data_format = "Maxwell"  # a patch for the old metadata.json
-    
+    if not os.path.isfile(parameter_path):
+        logging.error("Error: parameters.json not available. Using default parameters.")
+    else:
+        params = utils.load_paramter(parameter_path)   # TODO: save with kilosort parameters to the parameter_setting.json
+
     rec_filtered = extract_recording(rec_path=rec_file, output_folder=output_folder, format=data_format)
     if rec_filtered == -1:
         logging.error("Error: Recording not readable.")
@@ -180,11 +185,13 @@ if __name__ == "__main__":
     ks = RunKilosort(rec=rec_filtered, output_folder=output_folder)
     ks.run_sorting()
 
-    # curate
+    # auto-curation
     curation_folder = os.path.join(inter_folder, "sorted/curation")
     if not os.path.isdir(curation_folder):
         os.makedirs(curation_folder)
-    qm = QualityMetrics(base_folder=curation_folder, rec=rec_filtered, phy_folder=output_folder)
+    qm = QualityMetrics(base_folder=curation_folder, rec=rec_filtered, phy_folder=output_folder,
+                        min_snr=params["min_snr"], min_fr=params["min_fr"], max_isi_viol=params["max_isi_viol"], 
+                        default=True)
     spike_data = qm.compile_data()
     logging.info(f"{len(spike_data['neuron_data'])} units after quality metrics check")
     # remove the single channel units
@@ -200,8 +207,10 @@ if __name__ == "__main__":
     figure_folder = os.path.join(inter_folder, "sorted/figure")  
     if not os.path.isdir(figure_folder):
         os.makedirs(figure_folder)
+    
     # map, map with sttc; raster; individual spike footprints; stats for fr, isi, sttc; raster with burst, stats for burst
-    pe = plots.PlotlyEphys(spike_data_new, title=experiment)
+    pe = plots.PlotlyEphys(spike_data_new, bin_size=0.05, win=5, avg=False, win_tiling=0.02,
+                           gaussian=True, sigma=5, burst_rms_thr=3, title=experiment)
     overview_figure = pe.plot_html_page()
     overview_figure.write_html(f"{figure_folder}/{experiment}_overview.html")
     ## also save the output parameter so later I can add/delete things on the figure

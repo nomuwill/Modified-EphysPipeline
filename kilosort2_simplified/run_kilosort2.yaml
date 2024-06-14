@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sjg-simplified-r2
+  name: edp-simplified-test-2024-05-24-t220000-chip24442
 spec:
   backoffLimit: 2
   template:
@@ -16,9 +16,9 @@ spec:
           requests:
             cpu: "12"
             memory: "32Gi"
-            ephemeral-storage: "300Gi"
+            ephemeral-storage: "400Gi"
           limits:
-            cpu: "16"
+            cpu: "12"
             memory: "32Gi"
             ephemeral-storage: "400Gi"
             nvidia.com/gpu: 1
@@ -26,16 +26,16 @@ spec:
         command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
         args:
           - >-
-            ./run_temp.sh s3://braingeneers/ephys/2023-10-12-e-pm/original/data/Trace_7month_2953_pm.raw.h5
+            ./run.sh s3://braingeneers/integrated/2024-05-24-efi-mouse-7plex-followup/ephys/original/data/24442/2024-05-24-T220000-chip24442.raw.h5
         env:
           - name: "PYTHONUNBUFFERED"
             value: "true"
 
           # Ceph (internal)
           - name: "ENDPOINT_URL"
-            value: "http://rook-ceph-rgw-nautiluss3.rook"  # ceph internal
+            value: "https://s3.braingeneers.gi.ucsc.edu"  # ceph internal
           - name: "S3_ENDPOINT"
-            value: "rook-ceph-rgw-nautiluss3.rook" # ceph internal
+            value: "https://s3.braingeneers.gi.ucsc.edu" # ceph internal
 
         volumeMounts:
 
@@ -43,22 +43,12 @@ spec:
           - name: "prp-s3-credentials"
             mountPath: "/root/.aws/credentials"
             subPath: "credentials"
-#          - name: "prp-s3-credentials"
-#            mountPath: "/root/.s3cfg"
-#            subPath: ".s3cfg"
-#
-#          # kube config
-#          - name: "kube-config"
-#            mountPath: "/root/.kube"
-#          # SystemV shared memory
-#          - name: "dshm"
-#            mountPath: "/dev/shm"
 
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #       - matchExpressions:
               # GPU runs only
               # - key: nvidia.com/gpu.product
               #   operator: In
@@ -81,24 +71,24 @@ spec:
 #                - A100
 #                - K40
 #                - M4000
-#              # Host blacklist
-              - key: kubernetes.io/hostname
-                operator: In
-                values:
-                  # - hcc-nrp-shor-c5825.unl.edu
-                  # - fiona8-1.calit2.uci.edu
-                  # - k8s-chase-ci-01.calit2.optiputer.net
-                  # - k8s-gpu-2.ucsc.edu/128.114.109.79
-                  # -None
-                  - gpu-10.nrp.mghpcc.org
-                  - gpu-11.nrp.mghpcc.org
-                  - gpu-12.nrp.mghpcc.org
-                  - gpu-13.nrp.mghpcc.org
-                  - gpu-14.nrp.mghpcc.org
-                  - gpu-15.nrp.mghpcc.org
-                  - gpu-16.nrp.mghpcc.org
-                  - gpu-17.nrp.mghpcc.org
-                  - gpu-18.nrp.mghpcc.org
+             # Host blacklist
+              # - key: kubernetes.io/hostname
+              #   operator: NotIn
+              #   values:
+              #     - hcc-nrp-shor-c5825.unl.edu
+              #     - fiona8-1.calit2.uci.edu
+              #     - k8s-chase-ci-01.calit2.optiputer.net
+              #     - k8s-gpu-2.ucsc.edu
+              #     # -None
+              #     - gpu-10.nrp.mghpcc.org
+              #     - gpu-11.nrp.mghpcc.org
+              #     - gpu-12.nrp.mghpcc.org
+              #     - gpu-13.nrp.mghpcc.org
+              #     - gpu-14.nrp.mghpcc.org
+              #     - gpu-15.nrp.mghpcc.org
+              #     - gpu-16.nrp.mghpcc.org
+              #     - gpu-17.nrp.mghpcc.org
+              #     - gpu-18.nrp.mghpcc.org
               # - key: "feature.node.kubernetes.io/cpu-cpuid.AVX"
               #   operator: In
               #   values:

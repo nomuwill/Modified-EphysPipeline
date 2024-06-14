@@ -643,7 +643,7 @@ class PlotlyEphys:
     
 
     def minimum_isi_distribution(self):
-        min_isi = [np.min(np.diff(t))*1000 for t in self.train]    # unit in ms
+        min_isi = [np.min(np.diff(t))*1000 for t in self.train if len(t) > 1]    # unit in ms
         fig = go.Figure(data=[go.Histogram(x=min_isi, nbinsx=int(np.max(min_isi)+1),
                                            histnorm='probability', showlegend=False)])
         fig.update_layout(title=f'Minimum ISI Distribution', height=500, width=500)
@@ -684,16 +684,17 @@ class PlotlyEphys:
 
     def burst_duration_distribution(self):
         fig = go.Figure()
-        fig.add_trace(go.Violin(y=self.duration, 
-                                box_visible=True, 
-                                line_color='black', 
-                                meanline_visible=True, 
-                                fillcolor='lightseagreen', 
-                                opacity=0.6,
-                                showlegend=False))
-        fig.data[0].update(span=[np.min(self.duration), 
-                                 np.max(self.duration)], 
-                                 spanmode='manual')
+        if len(self.peak_indices) > 0:
+            fig.add_trace(go.Violin(y=self.duration, 
+                                    box_visible=True, 
+                                    line_color='black', 
+                                    meanline_visible=True, 
+                                    fillcolor='lightseagreen', 
+                                    opacity=0.6,
+                                    showlegend=False))
+            fig.data[0].update(span=[np.min(self.duration), 
+                                    np.max(self.duration)], 
+                                    spanmode='manual')
         fig.update_layout(title=f'Burst Duration', height=500, width=500)
         fig.update_layout(xaxis_title="", 
                           yaxis_title="Burst Duration (s)", 
@@ -710,16 +711,18 @@ class PlotlyEphys:
         """
         Burst interval defined as peak to peak interval
         """
-        ibi = np.diff(self.bins[self.peak_indices]) 
         fig = go.Figure()
-        fig.add_trace(go.Violin(y=ibi, 
-                                box_visible=True, 
-                                line_color='black', 
-                                meanline_visible=True, 
-                                fillcolor='darkturquoise', 
-                                opacity=0.6,
-                                showlegend=False))
-        fig.data[0].update(span=[np.min(ibi), np.max(ibi)], spanmode='manual')
+        if len(self.peak_indices) > 1:
+            ibi = np.diff(self.bins[self.peak_indices]) 
+        
+            fig.add_trace(go.Violin(y=ibi, 
+                                    box_visible=True, 
+                                    line_color='black', 
+                                    meanline_visible=True, 
+                                    fillcolor='darkturquoise', 
+                                    opacity=0.6,
+                                    showlegend=False))
+            fig.data[0].update(span=[np.min(ibi), np.max(ibi)], spanmode='manual')
         fig.update_layout(title=f'Inter-Burst Interval', height=500, width=500)
         fig.update_layout(xaxis_title="", 
                           yaxis_title="Inter-Burst Interval (s)", 
@@ -736,30 +739,31 @@ class PlotlyEphys:
         """
         Burstiness defined as number of spikes in burst / total number of spikes, for each unit
         """
-        burst_start = self.peak_widths[1]
-        burst_end = self.peak_widths[2]
-        burst_num = len(burst_start)
-        burstiness = []
-        burst_spikes = []
-        for i, t in enumerate(self.train):
-            for n in range(burst_num):
-                # print(n, t[(t > burst_start[n]) & (t < burst_end[n])])
-                burstiness.append(len(t[(t > burst_start[n]) & (t < burst_end[n])])/len(t))
-                burst_spikes.append(len(t[(t > burst_start[n]) & (t < burst_end[n])]))
-
-        burstiness_overall = np.sum(burst_spikes)/np.sum([len(t) for t in self.train])
-
         fig = go.Figure()
-        fig.add_trace(go.Violin(y=burstiness,
-                                box_visible=True,
-                                line_color='black',
-                                meanline_visible=True,
-                                fillcolor='cadetblue',
-                                opacity=0.6,
-                                showlegend=False))
-        fig.data[0].update(span=[np.min(burstiness), 
-                                 np.max(burstiness)], 
-                                 spanmode='manual')
+        if len(self.peak_indices) > 0:
+            burst_start = self.peak_widths[1]
+            burst_end = self.peak_widths[2]
+            burst_num = len(burst_start)
+            burstiness = []
+            burst_spikes = []
+            for i, t in enumerate(self.train):
+                for n in range(burst_num):
+                    # print(n, t[(t > burst_start[n]) & (t < burst_end[n])])
+                    burstiness.append(len(t[(t > burst_start[n]) & (t < burst_end[n])])/len(t))
+                    burst_spikes.append(len(t[(t > burst_start[n]) & (t < burst_end[n])]))
+
+            burstiness_overall = np.sum(burst_spikes)/np.sum([len(t) for t in self.train])
+
+            fig.add_trace(go.Violin(y=burstiness,
+                                    box_visible=True,
+                                    line_color='black',
+                                    meanline_visible=True,
+                                    fillcolor='cadetblue',
+                                    opacity=0.6,
+                                    showlegend=False))
+            fig.data[0].update(span=[np.min(burstiness), 
+                                    np.max(burstiness)], 
+                                    spanmode='manual')
         fig.update_layout(title=f'Burstiness', height=500, width=500)
         fig.update_layout(xaxis_title="",
                             yaxis_title="Burstiness",
@@ -775,18 +779,19 @@ class PlotlyEphys:
 
 
     def burst_peak_freq(self):
-        burst_freq = self.fr[self.peak_indices]
         fig = go.Figure()
-        fig.add_trace(go.Violin(y=burst_freq, 
-                                box_visible=True, 
-                                line_color='black', 
-                                meanline_visible=True, 
-                                fillcolor='dodgerblue', 
-                                opacity=0.6,
-                                showlegend=False))
-        fig.data[0].update(span=[np.min(burst_freq),
-                                 np.max(burst_freq)], 
-                                 spanmode='manual')
+        if len(self.peak_indices) > 0:
+            burst_freq = self.fr[self.peak_indices]
+            fig.add_trace(go.Violin(y=burst_freq, 
+                                    box_visible=True, 
+                                    line_color='black', 
+                                    meanline_visible=True, 
+                                    fillcolor='dodgerblue', 
+                                    opacity=0.6,
+                                    showlegend=False))
+            fig.data[0].update(span=[np.min(burst_freq),
+                                    np.max(burst_freq)], 
+                                    spanmode='manual')
         fig.update_layout(title=f'Firing Rate of Burst Peaks', height=500, width=500)
         fig.update_layout(xaxis_title="", 
                           yaxis_title="Population Firing Rate (Hz)", 

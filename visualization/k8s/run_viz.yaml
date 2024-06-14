@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sjg-viz-test-8
+  name: edp-viz-test-jls-7
 spec:
   backoffLimit: 2
   template:
@@ -26,7 +26,7 @@ spec:
         command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
         args:
           - >-
-            python viz.py s3://braingeneers/ephys/2024-04-02-e-JLS-midbrain-chimp/derived/kilosort2/Trace_20240424_17_32_17_ch22482-chimp_phy_curatedJLS.zip
+            python viz.py s3://braingeneers/ephys/2024-03-25-e-JLS-midbrain-humanmisc/derived/kilosort2/Trace_20240401_14_54_31_b3_phy_curatedJLS.zip
         env:
           - name: "PYTHONUNBUFFERED"
             value: "true"

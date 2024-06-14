@@ -14,6 +14,8 @@ import json
 import datetime
 from dateutil.tz import tzutc, gettz
 
+# TODO: add check output function from Kate's repo https://github.com/braingeneers/integrated-system-modules/tree/main/maxwell (analysis_tools.py)
+
 # set up parameters
 JOB_PREFIX = "edp-"  # electrophysiology
 NAMESPACE = 'braingeneers'
@@ -139,8 +141,11 @@ def parse_data_path(pod):
     args = pod.spec.containers[0].args[0]
     if "run_lfp.py " in args:
         data_path = args.split()[-3]
+    elif "run_conn.py " in args:
+        data_path = args.split()[-2]
     else: 
         data_path = args.split()[-1]   
+        # data_path = args.split()[-2]   # with parameter file 
     return data_path
 
 def format_dict_textarea(input_dict):

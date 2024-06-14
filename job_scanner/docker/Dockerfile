@@ -13,7 +13,6 @@ ENV ENDPOINT_URL="https://s3.braingeneers.gi.ucsc.edu"
 
 COPY src/ /app
 WORKDIR /app
-
 # run
 #CMD ["python", "job_scanner.py"]
 CMD ["python", "scan_pod.py"]

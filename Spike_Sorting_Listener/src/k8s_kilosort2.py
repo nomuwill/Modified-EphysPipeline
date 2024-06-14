@@ -24,6 +24,8 @@ class Kube:
                                        job_info["uuid"],
                                        "original/data",
                                        job_info["experiment"])
+        if "derived/" in s3_path:
+            s3_path = s3_path.replace("original/data/","")
         if "params" in job_info:
             params_path = f"{PARAMETER_BUCKET}/{job_info['params']}"
             logging.info(f"Creating a job for {s3_path} with parameters {params_path}")

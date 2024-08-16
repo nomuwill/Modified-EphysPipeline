@@ -14,6 +14,12 @@ PARAMETER_BUCKET = "s3://braingeneers/services/mqtt_job_listener/params"
 
 DEFAULT_BUCKET = "s3://braingeneers/ephys/"
 
+JOB_PREFIX = "edp-"  # electrophysiology
+
+NAMESPACE = 'braingeneers'
+
+FINISH_FLAGS = ["Succeeded", "Failed", "Unknown"]
+
 # Define the parameters for each job
 JOB_PARAMETERS = {
     0: ["parameter not yet available"],
@@ -80,7 +86,7 @@ DEFAULT_JOBS = {"batch":
                         "args": "python si_curation.py",
                         "cpu_request": 8,
                         "memory_request": 32,
-                        "disk_request": 200,
+                        "disk_request": 400,
                         "GPU": 0,
                         "params_label": "curation",
                         "next_job": "None"},
@@ -110,3 +116,12 @@ DEFAULT_JOBS = {"batch":
                         "next_job": "None"},
                 }
                 }
+
+IMG_JOB_LOOPUP = {
+    "surygeng/kilosort_docker:v0.2": "Kilosort2",
+    "surygeng/connectivity:v0.1": "Functional Connectivity Analysis",
+    "surygeng/ephys_pipeline:v0.1": "Ephys Pipeline (Kilosort2, Auto-Curation, Visualization)",
+    "surygeng/local_field_potential:v0.1": "Local Field Potential Subbands",
+    "surygeng/qm_curation:v0.2": "Auto-Curation by Quality Metrics",
+    "surygeng/visualization:v0.1": "Visualization"
+}

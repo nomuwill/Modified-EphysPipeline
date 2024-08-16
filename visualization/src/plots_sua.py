@@ -98,9 +98,10 @@ class PlotSUA:
             ax4.set_xlim([0, self.isi_range])
 
             # 6. plot amplitude scatter
-            amplitude_values = data["amplitudes"]
+            if "amplitudes" in data:
+                amplitude_values = data["amplitudes"]
+                ax5.scatter(self.train[k], amplitude_values, s=25)
             ax5.set_title(f"Amplitude", fontsize=11)
-            ax5.scatter(self.train[k], amplitude_values, s=25)
             ax5.set_xlabel("Time (s)", fontsize=11)
             ax5.set_ylabel("Amplitude (uV)", fontsize=11)
             ax5.set_xlim([0, self.rec_len])
@@ -108,8 +109,10 @@ class PlotSUA:
             ax5.spines['top'].set_visible(False)
 
             # 7. amplitude histogram
+            if "amplitudes" in data:
+                amplitude_values = data["amplitudes"]
+                ax6.hist(amplitude_values, bins=20, orientation='horizontal')
             ax6.set_title(f"Amplitude histogram", fontsize=11)
-            ax6.hist(amplitude_values, bins=20, orientation='horizontal')
             ax6.set_yticks([])
             ax6.set_xlabel("Counts", fontsize=11)
 

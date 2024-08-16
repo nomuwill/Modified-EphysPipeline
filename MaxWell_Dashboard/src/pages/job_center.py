@@ -292,7 +292,7 @@ def show_parameters_to_job(jobs):
         parameter_fields = []
         parameter_fields.append(
             dbc.Card([
-                dbc.Label("Input params file name", html_for=f"params_file_name"),
+                dbc.Label("File name", html_for=f"params_file_name"),
                 dcc.Textarea(id=f"params_file_name", 
                              style={'width': '100%', 'height': 30}),
                 html.Br()

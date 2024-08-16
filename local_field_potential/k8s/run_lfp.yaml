@@ -26,7 +26,7 @@ spec:
         command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
         args:
           - >-
-            python run_lfp.py s3://braingeneers/ephys/2023-04-04-e-hc328_hckcr1-2_040423_recs/original/data/2023_04_04_hc328_hckcr1-2_3.raw.h5 250 280        
+            python run_lfp.py s3://braingeneers/ephys/2024-03-29-e-interneurons_44/original/data/Trace_20240329_16_00_48_interneurons_44_23196.raw.h5 300 360        
         env:
           - name: "PYTHONUNBUFFERED"
             value: "true"

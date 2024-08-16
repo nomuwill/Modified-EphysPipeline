@@ -114,6 +114,14 @@ class Network:
                 )
         return ret
 
+    def acg(self):
+        for i in range(self.unit_count):
+            counts, lags = utils.ccg(self.sparse_train[i],
+                             self.sparse_train[i],
+                             ccg_win=self.ccg_window)
+            ind = np.where(lags == 0)[0][0]
+            counts[ind] = 0   # remove the value for lag=0
+            yield i, {"acg": counts, "lags": lags}
 
     # TODO: output these figures together with the overview figure
     def functional_pair(self):

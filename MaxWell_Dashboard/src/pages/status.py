@@ -4,31 +4,35 @@ from dash import dash_table
 import dash_bootstrap_components as dbc
 import braingeneers.utils.s3wrangler as wr
 import json
-
-# Isn't "kubectl get pods" good enough?
-# TODO: send over job csv id from job_center page -- Done
-# TODO: get job status directly from prp, make it simple
-# TODO: show real-time job status when an job ID is selected
+from kubernetes import client, config
+import utils as utils 
+from values import *
 
 
 dash.register_page(__name__)
+
 
 ####----------------------- make page -----------------------####
 layout = dbc.Container([
     html.H2("Job Status"),
     # html.Br(),
     html.Hr(),
-    html.Div(["Active jobs: ",
-              dcc.Checklist(id="checklist_running_jobs",
-                            options=[],
-                            value=[],
-                            )]),
+    dbc.Card([
+        # html.H5("Refresh to see the latest job status"),
+              dbc.Button("Refresh",
+                        id="refresh_button",
+                        outline=True,
+                        color="primary",
+                        ),
+             dbc.CardBody(id="jobs_status"),
+             ]),
 
     html.Br(),
-    dbc.Button("Clean",
-               id='reset_data_button',
-               disabled=False,
-               outline=True, ),
+    html.Br(),
+    html.Br(),
+    html.Hr(),
+    html.Div([html.P("Braingeneers@UCSC"),
+              html.P("All Rights Reserved")])
 ])
 
 
@@ -37,27 +41,65 @@ layout = dbc.Container([
 
 #######################--------------- callback functions ---------------#######################
 @callback(
-    Output("checklist_running_jobs", "options"),
-    Input("multipage_data", "data"),
-    State("checklist_running_jobs", "options")
-)
-def show_running_jobs(job_json, options):
-    print(type(job_json), f"Get data {job_json}, curr options {options}")
-    job_dict = json.loads(job_json)
-    if job_dict != {}:
-        for k, v in job_dict.items():
-            name = "".join(["Job #", k.split(".csv")[0]])
-            options.append(name)
-    return options
-
-
-@callback(
-    Output("multipage_data", "data", allow_duplicate=True),
-    Output("checklist_running_jobs", "options", allow_duplicate=True),
-    Input("reset_data_button", "n_clicks"),
+    Output("jobs_status", "children"),
+    Input("refresh_button", "n_clicks"),
     prevent_initial_call=True
 )
-def clean_stored_data(n_clicks):
-    if "reset_data_button" == ctx.triggered_id:
+def show_jobs_status(n_clicks):
+    job_status_fields = []
+    if "refresh_button" == ctx.triggered_id:
         if n_clicks is not None and n_clicks > 0:
-            return str("{}"), []
+            config.load_kube_config()
+            core_v1 = client.CoreV1Api()
+            try:
+                pod_list = core_v1.list_namespaced_pod(namespace=NAMESPACE)
+            except:
+                config.load_kube_config()
+                core_v1 = client.CoreV1Api()
+                pod_list = core_v1.list_namespaced_pod(namespace=NAMESPACE)
+
+            # create checklist for each job and a datatable for status
+            for pod in pod_list.items:
+                if not pod.metadata.name.startswith(JOB_PREFIX):
+                    continue
+                pname = pod.metadata.name
+                sts = pod.status.phase
+                img = pod.spec.containers[0].image
+                data_path, params_path = utils.parse_data_path(pod)
+                start_ts_str = "Unknown"
+                end_ts_str = "Unknown"
+                if sts not in ["Pending", "ContainerCreating"]:
+                    start_timestamp = pod.status.start_time
+                    start_ts_str = utils.convert_time(start_timestamp)
+                if sts in FINISH_FLAGS:
+                    if pod.status.conditions is not None:
+                        end_timestamp = pod.status.conditions[1].last_transition_time  
+                        end_ts_str = utils.convert_time(end_timestamp)
+
+                job_status_fields.append(
+                    dbc.Card([
+                    # html.Br(),
+                    # dbc.Label(pname, html_for=f"pod_{pname}"),
+                    html.H5(pname),
+                    dash_table.DataTable(
+                                id="status_table",
+                                style_cell={'textAlign': 'left'},
+                                columns=[
+                                    {'id': "info", 'name': ""},
+                                    {'id': "output", 'name': ""}],
+                                data=[
+                                    {"info": "Status", "output": sts},
+                                    {"info": "Job", "output": IMG_JOB_LOOPUP[img]},
+                                    {"info": "Data", "output": data_path},
+                                    {"info": "Parameter", "output": params_path},
+                                    {"info": "Start time", "output": start_ts_str},
+                                    {"info": "End time", "output": end_ts_str}
+                                ],
+                                row_deletable=False
+                            ),
+                    html.Br()
+                        ])
+                        )
+            if job_status_fields == []:
+                job_status_fields.append(html.H5("No active jobs"))
+    return job_status_fields

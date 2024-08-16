@@ -8,6 +8,8 @@ import time
 
 TOPIC = "experiments/upload"
 chip_id = "19894"
+# SUB_BUCKET = "original/data"
+SUB_BUCKET = "shared"
 
 
 def create_message(uuid, chip_id, exp_list):
@@ -28,12 +30,12 @@ def create_message(uuid, chip_id, exp_list):
     }
     experiments = {}
     for exp in exp_list:
-        exp_dataset = exp.split(f"/original/data/{chip_id}/")[1]
+        exp_dataset = exp.split(f"/{SUB_BUCKET}/{chip_id}/")[1]
         if exp_dataset.endswith(".raw.h5"):
             exp_name = exp_dataset.split(".raw.h5")[0]
         else:
             exp_name = exp_dataset
-        experiments[exp_name] = {"blocks": [{"path": f"ephys/original/data/{chip_id}/{exp_dataset}"}]}
+        experiments[exp_name] = {"blocks": [{"path": f"ephys/{SUB_BUCKET}/{chip_id}/{exp_dataset}"}]}
 
     message["ephys_experiments"] = experiments
     print(message)
@@ -65,7 +67,7 @@ if __name__ == '__main__':
             uuid += "/"
             s3_path = os.path.join(default_bucket, uuid)
         if os.path.join(s3_path, "ephys/") in wr.list_directories(s3_path):
-            data_path = os.path.join(s3_path, f"ephys/original/data/{chip_id}")
+            data_path = os.path.join(s3_path, f"ephys/{SUB_BUCKET}/{chip_id}")
             # if wr.does_object_exist(os.path.join(s3_path, "metadata.json")):
             #     metadata = ephys.load_metadata(uuid)
             recs = wr.list_objects(data_path)

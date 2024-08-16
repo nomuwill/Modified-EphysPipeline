@@ -26,14 +26,17 @@ def setup_logging(log_file):
 
 
 def curation_to_spike_data(cur_file):
-    if cur_file.endswith("zip") and "curated" in cur_file:
-        logging.info(f"Reading manual curated data from {cur_file}")
-        fs, spike_train, neuron_data = utils.read_phy_files(cur_file)
-        trains = [np.array(t)*fs for t in spike_train]
-    elif cur_file.endswith("_acqm.zip"):
+    if cur_file.endswith("_acqm.zip"):
         logging.info(f"Reading auto curated data from {cur_file}")
         train, neuron_data, _, fs = utils.load_curation(cur_file)
         trains = [np.array(t)*fs for t in train]
+    elif cur_file.endswith("zip"):
+        if "curated" in cur_file:
+            logging.info(f"Reading manual curated data from {cur_file}")
+        elif "phy" in cur_file:
+            logging.info(f"Reading data from {cur_file}, likely un-curated phy")
+        fs, spike_train, neuron_data = utils.read_phy_files(cur_file)
+        trains = [np.array(t)*fs for t in spike_train]
     else:
         logging.error(f"File format not recognized: {cur_file}")
         sys.exit(1)

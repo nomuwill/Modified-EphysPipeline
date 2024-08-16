@@ -7,6 +7,7 @@ import os
 import csv
 from values import *
 import time
+from dateutil.tz import gettz
 
 # TODO: change print to logging
 
@@ -162,3 +163,39 @@ def filter_dropdown(search_value=None):
     else:
         print(f"number of total uuids {len(uuids)}")
         return uuids
+    
+
+def convert_time(timestamp, timezone = "US/Pacific"):
+    """
+    convert utc time to local time and format to a string
+    :param timestamp: must be a datetime object
+    :return:
+    """
+    to_zone = gettz(timezone)
+    local_ts = timestamp.astimezone(to_zone)
+    ts_str = local_ts.strftime("%Y-%m-%d %H:%M:%S")
+    return ts_str
+
+
+def parse_data_path(pod):
+    """
+    Parse the container's argument to get data path and parameter file path
+    The argument is structured as 
+        "python script_name.py data_path param_file_path other_input_args_if_any"
+    or 
+        "./script_name.sh data_path param_file_path other_input_args_if_any"
+    """
+    args = pod.spec.containers[0].args[0]
+    if args.startswith("./"):
+        data_path = args.split()[1]
+        if "mqtt_job_listener/params" in args:
+            params_path = args.split()[2]
+        else:
+            params_path = None
+    elif args.startswith("python"):
+        data_path = args.split()[2]
+        if "mqtt_job_listener/params" in args:
+            params_path = args.split()[3]
+        else:
+            params_path = None
+    return data_path, params_path

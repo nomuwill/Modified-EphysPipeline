@@ -160,6 +160,7 @@ if __name__ == "__main__":
 
     # get format from metadata
     experiment = sys.argv[1]
+    logging.info(f"Start pipeline processing for experiment {experiment}")
     metadata_path = "/project/SpikeSorting/metadata.json"
     parameter_path = "/project/SpikeSorting/parameters.json"
     if not os.path.isfile(metadata_path):
@@ -171,8 +172,10 @@ if __name__ == "__main__":
         if (experiment in metadata["ephys_experiments"]) and \
                 ("data_format" in metadata["ephys_experiments"][experiment]):
             data_format = metadata["ephys_experiments"][experiment]["data_format"]
+            logging.info(f"Read data format from metadata.json, format is {data_format}")
         if not data_format:
             data_format = "Maxwell"  # a patch for the old metadata.json
+            logging.info(f"Data format not found in metadata.json, default to Maxwell")
     if not os.path.isfile(parameter_path):
         params = {"min_snr": 5, "min_fr": 0.1, "max_isi_viol": 0.2}
         logging.error(f"Error: parameters.json not available. Using default parameters for curation. {params}")

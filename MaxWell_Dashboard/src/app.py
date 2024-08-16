@@ -27,7 +27,7 @@ for page in dash.page_registry.values():
     print(f"Page to load: {page['name']} - {page['path']}, {page['relative_path']}")
 
 app.layout = html.Div([
-    dcc.Store(id="multipage_data", data=str("{}"), storage_type='local'),
+    # dcc.Store(id="multipage_data", data=str("{}"), storage_type='local'),   # store data for all pages
     html.H1('Ephys Pipeline Dashboard'),
     html.Div([
         html.Div(

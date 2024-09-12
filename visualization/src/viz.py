@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     spike_data_new = curation_to_spike_data(curation_local_path)
 
-    pe = plots.PlotlyEphys(spike_data_new, title=figure_name)
+    pe = plots.PlotlyEphys(spike_data_new, title=figure_name, save_to=figure_folder)
     overview_figure = pe.plot_html_page()
     overview_figure.write_html(f"{figure_folder}/{figure_name}_overview.html")
     ## also save the output parameter so later I can add/delete things on the figure

@@ -25,7 +25,8 @@ class QualityMetrics:
 
     """
 
-    def __init__(self, base_folder, rec, phy_folder, rec_path,
+    def __init__(self, base_folder, rec, phy_folder, rec_path, 
+                 data_format=None,
                  min_snr=5, min_fr=0.1, max_isi_viol=0.2,
                  default=True):
 
@@ -40,6 +41,7 @@ class QualityMetrics:
         self._snr_thres = min_snr
         self._fr_thres = min_fr
         self._isi_viol_thres = max_isi_viol
+        self.data_format = data_format
 
         self.we = self.extract_waveforms(rec, max_spikes=500)
         print("waveforms", self.we)
@@ -184,7 +186,12 @@ class QualityMetrics:
                               "neighbor_positions": positions[sorted_idx],
                               "neighbor_templates": temp[sorted_idx]
                               }
-        config = read_maxwell_mapping(self._rec_path)
+        if self.data_format == "Maxwell":
+            logging.info(f"Reading electrode configuration for {self.data_format} data format")
+            config = read_maxwell_mapping(self._rec_path)
+        else:
+            logging.info(f"Electrode configuration not available for {self.data_format} data format")
+            config = {}
         spike_data = {"train": {c: self.we_clean.sorting.get_unit_spike_train(c)
                                 for c in clusters},
                       "neuron_data": neuron_dict,

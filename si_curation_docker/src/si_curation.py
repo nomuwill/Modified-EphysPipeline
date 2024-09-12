@@ -37,14 +37,17 @@ class QualityMetrics:
 
     """
 
-    def __init__(self, base_folder, rec_name, phy_folder, params_dict={},
+    def __init__(self, base_folder, rec_name, phy_folder, 
+                 data_format=None, params_dict={},
                  max_spikes_waveform=500,
                  default=True):
         self.redundant_pairs = None
         self.extract_path = None
         self._rec_path = posixpath.join(base_folder, rec_name)
         self.base_folder = base_folder
+        self.data_format = data_format
         self.clean_folder = posixpath.join(base_folder, "cleaned_waveforms")
+
         phy_result = se.KiloSortSortingExtractor(phy_folder)
         self.phy_result = phy_result.remove_empty_units()
         if "min_snr" in params_dict:
@@ -90,12 +93,16 @@ class QualityMetrics:
         return curated_excess.unit_ids, list(all_remove_ids)
 
     def prepare_rec(self, low=300., high=6000., common_ref=True):
-        rec = MaxwellRecordingExtractor(file_path=self._rec_path)
-        gain_uv = read_maxwell_gain(self._rec_path)
+        if self.data_format == "Maxwell":
+            rec = MaxwellRecordingExtractor(file_path=self._rec_path)
+            gain_uv = read_maxwell_gain(self._rec_path)
+        elif self.data_format == "nwb":
+            rec = se.read_nwb(self._rec_path)
+            gain_uv = 1
         rec_scale = spre.ScaleRecording(rec, gain=gain_uv)
-        rec_filt = spre.bandpass_filter(rec_scale, freq_min=low, freq_max=high)
+        rec_filt = spre.bandpass_filter(rec_scale, freq_min=low, freq_max=high, dtype="float32")
         if common_ref:
-            rec_cmr = spre.common_reference(rec_filt, verbose=True)
+            rec_cmr = spre.common_reference(rec_filt)
             return rec_cmr
         else:
             return rec_filt
@@ -224,7 +231,12 @@ class QualityMetrics:
                               "neighbor_positions": positions[sorted_idx],
                               "neighbor_templates": temp[sorted_idx]
                               }
-        config = read_maxwell_mapping(self._rec_path)
+        if self.data_format == "Maxwell":
+            logging.info(f"Reading electrode configuration for {self.data_format} data format")
+            config = read_maxwell_mapping(self._rec_path)
+        else:
+            logging.info(f"Electrode configuration not available for {self.data_format} data format")
+            config = {}
         spike_data = {"train": {c: self.we_clean.sorting.get_unit_spike_train(c)
                                 for c in clusters},
                       "neuron_data": neuron_dict,
@@ -298,15 +310,20 @@ def upload_file(phy_path, local_file, params_file_name=None):
 def parse_uuid(data_path):
     experiment = data_path.split("/")[-1]
     base_path = data_path.split(experiment)[0]
-    phy_base_path = base_path.replace("original/data", "derived/kilosort2")
+    if "original/data" in base_path:
+        phy_base_path = base_path.replace("original/data", "derived/kilosort2")
+        metadata_path = base_path.split("original/data")[0] + "metadata.json"
+    elif "shared" in base_path:
+        phy_base_path = base_path.replace("shared", "derived/kilosort2")
+        metadata_path = base_path.split("shared")[0] + "metadata.json"
     if experiment.endswith(".raw.h5"):
         experiment = experiment.split(".raw.h5")[0]
     elif experiment.endswith(".h5"):
         pass
     else:
-        logging.error("File format not support")
+        experiment = experiment.split(".")[0]
     phy_path = posixpath.join(phy_base_path, experiment + "_phy.zip")
-    return base_path, phy_path
+    return base_path, experiment, metadata_path, phy_path
 
 def hash_file_name(input_string):
     import hashlib
@@ -323,9 +340,10 @@ if __name__ == "__main__":
     param_path = sys.argv[2]
     params_file_name = param_path.split("/")[-1].split(".")[0]
  
-    s3_base_path, phy_path = parse_uuid(data_path=data_path)
+    s3_base_path, experiment, metadata_path, phy_path = parse_uuid(data_path=data_path)
     print(f"s3 path: {data_path}")  # original recording s3 full path
     print(f"s3 base: {s3_base_path}")
+    print(f"metadata path: {metadata_path}")
     print(f"phy path: {phy_path}")
     print(f"parameter file path: {param_path}")
 
@@ -339,6 +357,7 @@ if __name__ == "__main__":
     print(base_folder)
     extract_dir = base_folder + "/kilosort_result"
     kilosort_local_path = posixpath.join(base_folder, "kilosort_result.zip")
+    metadata_local_path = posixpath.join(base_folder, "metadata.json")
 
     for p in [phy_path, data_path, param_path]:
         try:
@@ -347,6 +366,25 @@ if __name__ == "__main__":
             logging.exception(f"File doesn't exist on S3! {p}")
             logging.info("Program exited")
             raise err
+    
+    # download metadata
+    if wr.does_object_exist(metadata_path):
+        logging.info("Start downloading metadata ...")
+        wr.download(metadata_path, metadata_local_path)
+        logging.info("Done!")
+        with open(metadata_local_path, "r") as f:
+            metadata = json.load(f)
+            if (experiment in metadata["ephys_experiments"]) and \
+                    ("data_format" in metadata["ephys_experiments"][experiment]):
+                data_format = metadata["ephys_experiments"][experiment]["data_format"]
+                logging.info(f"Read data format from metadata.json, format is {data_format}")
+            else:
+                data_format = "Maxwell"  # a patch for the old metadata.json
+                logging.info(f"Data format not found in metadata.json, default to Maxwell")
+    else:
+        logging.info("Metadata file not found. Skip downloading metadata.")
+        logging.info("Data format default to Maxwell")
+        data_format = "Maxwell"
 
     # download phy.zip
     logging.info("Start downloading kilosort result ...")
@@ -357,7 +395,7 @@ if __name__ == "__main__":
 
     # download raw data
     logging.info("Start downloading raw data ...")
-    experiment = "rec.raw.h5"
+    experiment = "rec"
     wr.download(data_path, posixpath.join(base_folder, experiment))
     logging.info("Done")
 
@@ -379,6 +417,7 @@ if __name__ == "__main__":
     curation = QualityMetrics(base_folder=base_folder, 
                               rec_name=experiment, 
                               phy_folder=extract_dir,
+                              data_format=data_format, 
                               params_dict=params_dict)
     qm_file, wf_file = curation.package_cleaned()
 

@@ -194,7 +194,8 @@ if __name__ == "__main__":
     curation_folder = os.path.join(inter_folder, "sorted/curation")
     if not os.path.isdir(curation_folder):
         os.makedirs(curation_folder)
-    qm = QualityMetrics(base_folder=curation_folder, rec=rec_filtered, phy_folder=output_folder, rec_path=rec_file,
+    qm = QualityMetrics(base_folder=curation_folder, rec=rec_filtered, 
+                        phy_folder=output_folder, rec_path=rec_file, data_format=data_format,
                         min_snr=params["min_snr"], min_fr=params["min_fr"], max_isi_viol=params["max_isi_viol"], 
                         default=True)
     spike_data = qm.compile_data()
@@ -215,7 +216,7 @@ if __name__ == "__main__":
     
     # map, map with sttc; raster; individual spike footprints; stats for fr, isi, sttc; raster with burst, stats for burst
     pe = plots.PlotlyEphys(spike_data_new, bin_size=0.05, win=5, avg=False, win_tiling=0.02,
-                           gaussian=True, sigma=5, burst_rms_thr=3, title=experiment)
+                           gaussian=True, sigma=5, burst_rms_thr=3, title=experiment, save_to=figure_folder)
     overview_figure = pe.plot_html_page()
     overview_figure.write_html(f"{figure_folder}/{experiment}_overview.html")
     ## also save the output parameter so later I can add/delete things on the figure

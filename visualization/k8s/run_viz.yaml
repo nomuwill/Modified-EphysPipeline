@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: edp-viz-test-ojas-1
+  name: sjg-viz-test-nwb-1
 spec:
   backoffLimit: 2
   template:
@@ -26,7 +26,7 @@ spec:
         command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
         args:
           - >-
-            python viz.py s3://braingeneers/ephys/2024-01-05-e-uploader-test/derived/autocuration/7month_2953_params_default_acqm.zip
+            python viz.py s3://braingeneers/ephys/2024-08-19-e-3brain-test/derived/autocuration/Dorsal_3DAccura_00_brw_params_default_acqm.zip
         env:
           - name: "PYTHONUNBUFFERED"
             value: "true"

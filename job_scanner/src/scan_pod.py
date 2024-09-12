@@ -111,7 +111,7 @@ class edpScanner:
                                                                     propagation_policy='Foreground',
                                                                     grace_period_seconds=0)
                                                                 )
-                            logging.info(f"Delete {status["status"]} pod {api_response.metadata.name}")
+                            logging.info(f"Delete {status['status']} pod {api_response.metadata.name}")
                             time.sleep(0.1)
                         except ApiException as e:
                             logging.error(f"Exception when calling CoreV1Api->delete_namespaced_pod: {e}")

@@ -3,8 +3,10 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y time
 
-RUN python -m pip install --force-reinstall 'git+https://github.com/SpikeInterface/spikeinterface.git'
-RUN python -m pip install --force-reinstall 'git+https://github.com/braingeneers/braingeneerspy.git#egg=braingeneerspy[iot, data]'
+# RUN python -m pip install --force-reinstall 'git+https://github.com/SpikeInterface/spikeinterface.git'
+RUN pip install "spikeinterface==0.98.0"
+# RUN python -m pip install --force-reinstall 'git+https://github.com/braingeneers/braingeneerspy.git#egg=braingeneerspy[iot, data]'
+RUN pip install "braingeneers[iot, analysis, data]"
 
 RUN pip install numpy \
     deprecated \
@@ -12,7 +14,8 @@ RUN pip install numpy \
     tbb \
     h5py \
     scipy \
-    glances 
+    glances \
+    pynwb
 
 # COPY docker/requirements.txt ./src/requirements.txt
 # RUN set -ex && \

@@ -7,12 +7,14 @@ import utils
 from burst import Network
 import plotly.subplots as sp
 import logging
+import os
 
 
 class PlotlyEphys:
     def __init__(self, spike_data, bin_size=0.05, win=5, avg=False,
                  win_tiling=0.02,
-                 gaussian=True, sigma=5, burst_rms_thr=3, title=None):
+                 gaussian=True, sigma=5, burst_rms_thr=3, title=None,
+                 save_to=None):
         self.fs = spike_data["fs"]
         if isinstance(spike_data["train"], dict):
             self.train = [t/self.fs for _, t in spike_data["train"].items()]
@@ -40,6 +42,11 @@ class PlotlyEphys:
         self.sigma = sigma
         self.win_tiling = win_tiling
         self.title = title
+        if save_to is None:
+            # get current working directory
+            self.save_to = os.getcwd()
+        else:
+            self.save_to = save_to
 
         pb = Network(spike_data={"train": self.train,
                                  "neuron_data": self.neuron_data,
@@ -83,6 +90,7 @@ class PlotlyEphys:
                                       [{}, {}, {}, {}]])
         # start plotting each subplot
         ### 1. 
+        logging.info("Generating the html page for the recording ...")
         logging.info("Plotting activity map ...")
         fig11 = self.activity_map()
         for trace in fig11.data:
@@ -98,6 +106,7 @@ class PlotlyEphys:
                          title_standoff=self.standoff,
                          row=1, col=1)
         # fig.update_layout(legend=dict(yanchor='bottom', xanchor='center', y=-0.45, x=0.5, orientation='h'))
+        fig11.write_html(os.path.join(self.save_to, "activity_map.html"))
         
         ### 2.
         logging.info("Plotting raster ...")
@@ -107,15 +116,17 @@ class PlotlyEphys:
                 continue
             else:
                 fig.add_trace(trace, row=1, col=2)
+        fig12.write_html(os.path.join(self.save_to, "raster.html"))
 
         ### 3.
-        logging.info("Plotting isi of unit ...")
+        logging.info("Plotting isi of units ...")
         fig14 = self.isi_single_unit()
         for trace in fig14.data:
             fig.add_trace(trace, row=1, col=4)
         # fig.update_xaxes(range=[0, 1000], 
         #                  tickvals=[0, 200, 400, 600, 800, 1000], 
         #                  row=1, col=4)
+        fig14.write_html(os.path.join(self.save_to, "isi_of_units.html"))
 
         ### 4.
         logging.info("Plotting footprint ...")
@@ -132,6 +143,7 @@ class PlotlyEphys:
                          title_font=dict(size=self.axis_title_size),
                          title_standoff=self.standoff,
                          row=2, col=1)
+        fig21.write_html(os.path.join(self.save_to, "footprint.html"))
 
         ### 5.
         logging.info("Plotting raster with burst detection ...")
@@ -147,12 +159,14 @@ class PlotlyEphys:
         #                               line=dict(color='magenta', width=3, dash='dash'),
         #                               yref='y2'
         #                               ), row=2, col=2, secondary_y=True)
+        fig22.write_html(os.path.join(self.save_to, "raster_with_burst.html"))
 
         ### 6.
         logging.info("Plotting sttc heatmap ...")
         fig24 = self.sttc_heatmap()
         for trace in fig24.data:
             fig.add_trace(trace, row=2, col=4)
+        fig24.write_html(os.path.join(self.save_to, "sttc_heatmap.html"))
 
         ### 7.
         logging.info("Plotting firing distribution ...")
@@ -160,6 +174,7 @@ class PlotlyEphys:
         for trace in fig31.data:
             fig.add_trace(trace, row=3, col=1)
         fig.update_xaxes(range=[0, 8], tickvals=[0, 2, 4, 6, 8], row=3, col=1)
+        fig31.write_html(os.path.join(self.save_to, "firing_distribution.html"))
 
         ### 8.
         logging.info("Plotting amplitude distribution ...")
@@ -167,6 +182,7 @@ class PlotlyEphys:
         for trace in fig32.data:
             fig.add_trace(trace, row=3, col=2)
         fig.update_xaxes(range=[0, 100], tickvals=np.arange(0, 100, 10), row=3, col=2)
+        fig32.write_html(os.path.join(self.save_to, "amplitude_distribution.html"))
         
         ### 9.
         logging.info("Plotting minimum ISI duration ...")
@@ -174,12 +190,14 @@ class PlotlyEphys:
         for trace in fig33.data:
             fig.add_trace(trace, row=3, col=3)
         fig.update_xaxes(range=[0, 50], tickvals=np.arange(0, 50, 10), row=3, col=3)
+        fig33.write_html(os.path.join(self.save_to, "min_isi_distribution.html"))
 
         ### 10.
         logging.info("Plotting spike waveform for all neurons ...")
         fig34 = self.waveform_overlay()
         for trace in fig34.data:
             fig.add_trace(trace, row=3, col=4)
+        fig34.write_html(os.path.join(self.save_to, "waveform_overlay.html"))
 
         ### 11.
         logging.info("Plotting burst duration ...")
@@ -187,6 +205,7 @@ class PlotlyEphys:
         for trace in fig41.data:
             fig.add_trace(trace, row=4, col=1)
         fig.update_xaxes(showticklabels=False, row=4, col=1)
+        fig41.write_html(os.path.join(self.save_to, "burst_duration.html"))
 
         ### 12.
         logging.info("Plotting inter-burst interval ...")
@@ -194,6 +213,7 @@ class PlotlyEphys:
         for trace in fig42.data:
             fig.add_trace(trace, row=4, col=2)
         fig.update_xaxes(showticklabels=False, row=4, col=2)
+        fig42.write_html(os.path.join(self.save_to, "burst_interval.html"))
 
         ### 13.
         logging.info("Plotting firing rate for burst peaks ...")
@@ -201,6 +221,7 @@ class PlotlyEphys:
         for trace in fig43.data:
             fig.add_trace(trace, row=4, col=3)
         fig.update_xaxes(showticklabels=False, row=4, col=3)
+        fig43.write_html(os.path.join(self.save_to, "burst_peak_fr.html"))
 
         ### 14.
         logging.info("Plotting burstiness ...")
@@ -208,6 +229,7 @@ class PlotlyEphys:
         for trace in fig44.data:
             fig.add_trace(trace, row=4, col=4)
         fig.update_xaxes(showticklabels=False, row=4, col=4)
+        fig44.write_html(os.path.join(self.save_to, "burstiness.html"))
 
         ### layout
         def set_axis(title:str):

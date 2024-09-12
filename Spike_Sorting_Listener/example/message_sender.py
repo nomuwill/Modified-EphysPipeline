@@ -7,6 +7,7 @@ import os
 import time
 
 TOPIC = "experiments/upload"
+INTER_BUCKET = "original/data/"
 
 
 def create_message(uuid, exp_list, ow=False):
@@ -28,15 +29,18 @@ def create_message(uuid, exp_list, ow=False):
     }
     experiments = {}
     for exp in exp_list:
-        exp_dataset = exp.split("/original/data/")[1]
-        if exp_dataset.endswith(".raw.h5"):
-            exp_name = exp_dataset.split(".raw.h5")[0]
-        elif exp_dataset.endswith(".h5"):
-            exp_name = exp_dataset.split(".h5")[0]
-        else:
-            exp_name = exp_dataset
-        experiments[exp_name] = {"blocks": [{"path": f"original/data/{exp_dataset}"}]}
-
+        exp_dataset = exp.split(INTER_BUCKET)[1]
+        exp_name = exp_dataset.split(".")[0]
+        # if exp_dataset.endswith(".raw.h5"):
+        #     exp_name = exp_dataset.split(".raw.h5")[0]
+        # elif exp_dataset.endswith(".h5"):
+        #     exp_name = exp_dataset.split(".h5")[0]
+        # elif exp_dataset.endswith(".nwb"):
+        #     exp_name = exp_dataset.split(".nwb")[0]
+        # else:
+        #     exp_name = exp_dataset
+        experiments[exp_name] = {"blocks": [{"path": f"{INTER_BUCKET}{exp_dataset}"}]}
+        
     message["ephys_experiments"] = experiments
     print(message)
     return message
@@ -48,7 +52,13 @@ if __name__ == '__main__':
 
     print("############### Welcome to Braingeneers Electrophysiology Data Pipeline ###############")
     print(f"Default bucket: {default_bucket}")
+    print(f"Default inter bucket: {INTER_BUCKET}")
 
+    change_inter_bucket = input("Do you want to change the inter bucket? y/n")
+    if change_inter_bucket == "y":
+        INTER_BUCKET = input("Please input the new inter bucket: ")
+        print(f"Inter bucket changed to {INTER_BUCKET}")
+    
     data_path = None
     uuid = None
     get_uuid = True
@@ -63,10 +73,12 @@ if __name__ == '__main__':
         else:
             uuid += "/"
             s3_path = os.path.join(default_bucket, uuid)
-        if os.path.join(s3_path, "original/") in wr.list_directories(s3_path):
-            data_path = os.path.join(s3_path, "original/data/")
+            print(wr.list_directories(s3_path))
+        if os.path.join(s3_path, INTER_BUCKET.split("/")[0]+"/") in wr.list_directories(s3_path):
+            data_path = os.path.join(s3_path, INTER_BUCKET)
             # if wr.does_object_exist(os.path.join(s3_path, "metadata.json")):
             #     metadata = ephys.load_metadata(uuid)
+            print(f"data path is {data_path}")
             recs = wr.list_objects(data_path)
             print(f"Found {len(recs)} recordings.")
             for rec in recs:
@@ -76,7 +88,7 @@ if __name__ == '__main__':
             print("No available recording. Please input another UUID")
 
     exp_list = wr.list_objects(data_path)
-    exp_name = [exp.split("/data/")[1] for exp in exp_list]
+    exp_name = [exp.split(INTER_BUCKET)[1] for exp in exp_list]
     # get experiment
     experiment = None
     while get_exp:

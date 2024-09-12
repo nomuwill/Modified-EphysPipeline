@@ -2,9 +2,10 @@ FROM python:3.10
 ENV DEBIAN_FRONTEND=noninteractive
 ENV DASH_DEBUG_MODE=False
 
-RUN python -m pip install --force-reinstall 'git+https://github.com/braingeneers/braingeneerspy.git#egg=braingeneerspy[iot,analysis,data]'
+# RUN python -m pip install --force-reinstall 'git+https://github.com/braingeneers/braingeneerspy.git#egg=braingeneerspy[iot,analysis,data]'
 
-RUN pip install kubernetes \
+RUN pip install braingeneers['iot','analysis','data'] \
+    kubernetes \
     uuid \
     deprecated
 

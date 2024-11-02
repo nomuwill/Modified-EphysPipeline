@@ -43,7 +43,7 @@ class Network:
 
         self.sparse_train = utils.sparse_train(self.train, bin_size=self.binary_bin_size)
         if self.verbose:
-            print(f"spare train shape {self.sparse_train.shape}")
+            logging.info(f"spare train shape {self.sparse_train.shape}")
 
     def two_step_smooth(self):
         sparse_sum = np.sum(self.sparse_train, axis=0)
@@ -123,7 +123,6 @@ class Network:
             counts[ind] = 0   # remove the value for lag=0
             yield i, {"acg": counts, "lags": lags}
 
-    # TODO: output these figures together with the overview figure
     def functional_pair(self):
         """
         Get putative pre- and post-synaptic neuron pairs
@@ -136,8 +135,9 @@ class Network:
         for i in range(self.unit_count-1):
             for j in range(i+1, self.unit_count):
                 counts, lags = utils.ccg(self.sparse_train[i],
-                             self.sparse_train[j],
-                             ccg_win=self.ccg_window)
+                                         self.sparse_train[j],
+                                         ccg_win=self.ccg_window, 
+                                         bin_size=self.binary_bin_size*1000)
                 max_ind = np.argmax(counts)
                 latency = lags[max_ind]
                 if latency >= -self.func_latency and latency <= self.func_latency:
@@ -149,9 +149,9 @@ class Network:
                         # estimate p_fast
                         p_fast_est = utils.p_fast(ccg_peak, lambda_slow_peak)
                         if self.verbose:
-                            print(f"Putative functional pair {i}, {j}")
-                            print(f"Cross correlation latency: {latency} ms, counts: {ccg_peak}, smoothed counts: {lambda_slow_peak}")
-                            print(f"p_fast: {p_fast_est}")
+                            logging.info(f"Putative functional pair {i}, {j}")
+                            logging.info(f"Cross correlation latency: {latency} ms, counts: {ccg_peak}, smoothed counts: {lambda_slow_peak}")
+                            logging.info(f"p_fast: {p_fast_est}")
                         if p_fast_est <= self.func_prob:    # test with self.func_prob = 10e-5
                             yield (i, j), {"latency": latency,
                                         "p_fast": p_fast_est,

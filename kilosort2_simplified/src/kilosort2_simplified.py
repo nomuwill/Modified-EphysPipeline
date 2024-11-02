@@ -17,6 +17,7 @@ import shutil
 
 FORMAT_LIST = ["Maxwell", "mearec", "nwb"]
 data_format = None
+REMOVE_SINGLE_CHANNEL = False
 
 # TODO: Fix this mearec error 
 # assert filename.suffix in [".h5", ".hdf5"], "Provide an .h5 or .hdf5 file name"
@@ -200,9 +201,13 @@ if __name__ == "__main__":
                         default=True)
     spike_data = qm.compile_data()
     logging.info(f"{len(spike_data['neuron_data'])} units after quality metrics check")
-    # remove the single channel units
-    spike_data_new = utils.remove_single_channel_unit(spike_data)
-    logging.info(f"{len(spike_data_new['neuron_data'])} units after removing single channel units")
+    if REMOVE_SINGLE_CHANNEL:
+        # remove the single channel units
+        spike_data_new = utils.remove_single_channel_unit(spike_data)
+        logging.info(f"{len(spike_data_new['neuron_data'])} units after removing single channel units")
+    else:
+        spike_data_new = spike_data
+        logging.info(f"REMOVE_SINGLE_CHANNEL set to {REMOVE_SINGLE_CHANNEL}, bypass single channel unit check")
     # package the qm file for upload
     qm_file = qm.package_cleaned(spike_data_new)
     # logging.info("qm file dir", qm_file)

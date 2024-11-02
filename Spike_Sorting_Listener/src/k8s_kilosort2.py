@@ -56,7 +56,8 @@ class Kube:
                  client.V1EnvVar(name="ENDPOINT_URL", value="https://s3.braingeneers.gi.ucsc.edu"),  # use external url to avoid 403 error
                  client.V1EnvVar(name="S3_ENDPOINT", value="s3.braingeneers.gi.ucsc.edu")],
             volume_mounts=[client.V1VolumeMount(name="prp-s3-credentials", mount_path="/root/.aws/credentials",
-                                                sub_path="credentials")])
+                                                sub_path="credentials"),
+                           client.V1VolumeMount(name="ephemeral", mount_path="/root")])
         if "whitelist_nodes" in self.job_info:
             affinity = client.V1Affinity(
                 node_affinity=client.V1NodeAffinity(

@@ -167,11 +167,12 @@ def sparse_train(spike_train: list, bin_size=0.001):
     st = csr_array((values, indices, indptr),
                    shape=(num, length)).toarray()
     return st
+  
 
-
-def ccg(bt1, bt2, ccg_win=[-10, 10], t_lags_shift=0):
+def ccg(bt1, bt2, ccg_win=[-10, 10], t_lags_shift=0, bin_size=1):
+    ccg_win = [int(ccg_win[0]), int(ccg_win[1])]
     left_edge, right_edge = np.subtract(ccg_win, t_lags_shift)
-    lags = np.arange(ccg_win[0], ccg_win[1] + 1)
+    lags = np.arange(ccg_win[0], ccg_win[1] + bin_size, bin_size)
     pad_width = min(max(-left_edge, 0), max(right_edge, 0))
     bt2_pad = np.pad(bt2, pad_width=pad_width, mode='constant')
     cross_corr = signal.fftconvolve(bt2_pad, bt1[::-1], mode="valid")
@@ -207,7 +208,7 @@ def hollow_gaussian_round(sigma=10, truncate=4, kerlen=11, hf=0.6):
     phi_x = phi_x / phi_x.sum()
 
     # generate a triangle
-    triangle_center = (1 - (1-hf) * signal.triang(kerlen)) 
+    triangle_center = (1 - (1-hf) * signal.windows.triang(kerlen)) 
     triangle = np.concatenate((np.ones(len(x)//2 - kerlen//2), 
                                triangle_center, 
                                np.ones(len(x)//2 - kerlen//2))) 

@@ -18,7 +18,8 @@ import json
 
 # BUCKET = "s3://braingeneers/ephys/"
 JOB_KWARGS = dict(n_jobs=10, progress_bar=True)
-os.environ["HDF5_PLUGIN_PATH"] = os.getcwd()
+hdf5_plugin_path = '/src/'
+# os.environ["HDF5_PLUGIN_PATH"] = hdf5_plugin_path
 LOG_FILE_NAME = "run_autocuration.log"
 stream_handler = logging.StreamHandler()
 stream_handler.setLevel(logging.INFO)
@@ -30,6 +31,17 @@ logging.basicConfig(level=logging.INFO,
 DEFUALT_PARAMS = {"min_snr": 5,
                   "min_fr": 0.1,
                   "max_isi_viol": 0.2}
+
+def setup_hdf5():
+    # os.environ['HDF5_PLUGIN_PATH'] = hdf5_plugin_path
+    # copy the plugin to "/usr/local/hdf5/lib/plugin" to make sure this file can be found by the script
+    path_to_lib = os.path.join(hdf5_plugin_path, "libcompression.so")
+    if os.path.isfile(path_to_lib):
+        os.makedirs("/usr/local/hdf5/lib/plugin/")
+        shutil.copy(path_to_lib, "/usr/local/hdf5/lib/plugin/libcompression.so")
+    else:
+        logging.info("Maxwell hdf5 plugin not found")
+    os.environ['HDF5_PLUGIN_PATH'] = "/usr/local/hdf5/lib/plugin/"
 
 class QualityMetrics:
     """
@@ -200,11 +212,13 @@ class QualityMetrics:
         np.savez(qm_npz, **spike_data)
         shutil.move(LOG_FILE_NAME, curated_folder)
         qm_file = shutil.make_archive(posixpath.join(self.base_folder, "qm"), format="zip", root_dir=curated_folder)
+        logging.info(f"Cleaned data saved to {qm_file}")
         # also package waveforms
         rec_attr = posixpath.join(self.extract_path, "recording_info", "recording_attributes.json")
         if os.path.isfile(rec_attr):
             shutil.copy(rec_attr, self.clean_folder)
-        wf_file = shutil.make_archive(posixpath.join(self.base_folder, "wf"), format="zip", root_dir=self.clean_folder)
+        # wf_file = shutil.make_archive(posixpath.join(self.base_folder, "wf"), format="zip", root_dir=self.clean_folder)
+        wf_file = None
         return qm_file, wf_file
 
     def compile_data(self, n=12):
@@ -243,6 +257,7 @@ class QualityMetrics:
                       "config": config,
                       "redundant_pairs": self.redundant_pairs,
                       "fs": self.we_clean.recording.sampling_frequency}
+        logging.info(f"Compiled data for {nc} cleaned units")
         return spike_data
 
 def read_maxwell_gain(h5_file):
@@ -316,6 +331,7 @@ def parse_uuid(data_path):
     elif "shared" in base_path:
         phy_base_path = base_path.replace("shared", "derived/kilosort2")
         metadata_path = base_path.split("shared")[0] + "metadata.json"
+        
     if experiment.endswith(".raw.h5"):
         experiment = experiment.split(".raw.h5")[0]
     elif experiment.endswith(".h5"):
@@ -339,6 +355,8 @@ if __name__ == "__main__":
     data_path = sys.argv[1]
     param_path = sys.argv[2]
     params_file_name = param_path.split("/")[-1].split(".")[0]
+
+    setup_hdf5()
  
     s3_base_path, experiment, metadata_path, phy_path = parse_uuid(data_path=data_path)
     print(f"s3 path: {data_path}")  # original recording s3 full path
@@ -348,7 +366,8 @@ if __name__ == "__main__":
     print(f"parameter file path: {param_path}")
 
     # download file from s3
-    current_folder = os.getcwd()
+    # current_folder = os.getcwd()
+    current_folder = "/tmp"   # to make sure the volumn mount works
     subfolder = "/data"
     base_folder = current_folder + subfolder
 

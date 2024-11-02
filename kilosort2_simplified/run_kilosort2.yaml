@@ -1,112 +1,122 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: edp-simplified-test-2024-05-24-t220000-chip24442
+  name: sjg-simplified-test-3b-1
 spec:
   backoffLimit: 2
   template:
     spec:
       containers:
-      - name: container
-        image: surygeng/ephys_pipeline:v0.1
-        imagePullPolicy: Always
-        resources:
-
-          # GPU Run
-          requests:
-            cpu: "12"
-            memory: "32Gi"
-            ephemeral-storage: "400Gi"
-          limits:
-            cpu: "12"
-            memory: "32Gi"
-            ephemeral-storage: "400Gi"
-            nvidia.com/gpu: 1
-
-        command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
-        args:
-          - >-
-            ./run.sh s3://braingeneers/integrated/2024-05-24-efi-mouse-7plex-followup/ephys/original/data/24442/2024-05-24-T220000-chip24442.raw.h5
-        env:
-          - name: "PYTHONUNBUFFERED"
-            value: "true"
-
-          # Ceph (internal)
-          - name: "ENDPOINT_URL"
-            value: "https://s3.braingeneers.gi.ucsc.edu"  # ceph internal
-          - name: "S3_ENDPOINT"
-            value: "https://s3.braingeneers.gi.ucsc.edu" # ceph internal
-
-        volumeMounts:
-
-          # Ceph credentials
-          - name: "prp-s3-credentials"
-            mountPath: "/root/.aws/credentials"
-            subPath: "credentials"
-
-      # affinity:
-      #   nodeAffinity:
-      #     requiredDuringSchedulingIgnoredDuringExecution:
-      #       nodeSelectorTerms:
-      #       - matchExpressions:
-              # GPU runs only
-              # - key: nvidia.com/gpu.product
-              #   operator: In
-              #   values:
-              #     # - NVIDIA-RTX-A10
-              #     # - NVIDIA-A100-SXM4-80GB
-              #     # - NVIDIA-GeForce-RTX-2080-Ti
-              #     # - NVIDIA-GeForce-RTX-3090
-              #     - NVIDIA-GeForce-GTX-1080-Ti
-                  # - NVIDIA-GeForce-GTX-1080
-                  # - NVIDIA-RTX-A4000
-#                  - TITANRTX
-#                  - titan-xp
-#                  - M4000
-#                  - V100
-#              - key: gpu-type
-#                operator: NotIn
-#                values:
-#                - A40
-#                - A100
-#                - K40
-#                - M4000
-             # Host blacklist
-              # - key: kubernetes.io/hostname
-              #   operator: NotIn
-              #   values:
-              #     - hcc-nrp-shor-c5825.unl.edu
-              #     - fiona8-1.calit2.uci.edu
-              #     - k8s-chase-ci-01.calit2.optiputer.net
-              #     - k8s-gpu-2.ucsc.edu
-              #     # -None
-              #     - gpu-10.nrp.mghpcc.org
-              #     - gpu-11.nrp.mghpcc.org
-              #     - gpu-12.nrp.mghpcc.org
-              #     - gpu-13.nrp.mghpcc.org
-              #     - gpu-14.nrp.mghpcc.org
-              #     - gpu-15.nrp.mghpcc.org
-              #     - gpu-16.nrp.mghpcc.org
-              #     - gpu-17.nrp.mghpcc.org
-              #     - gpu-18.nrp.mghpcc.org
-              # - key: "feature.node.kubernetes.io/cpu-cpuid.AVX"
-              #   operator: In
-              #   values:
-              #     - "true"
-
+        - name: container
+          image: surygeng/ephys_pipeline:v0.2
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: "12"
+              memory: "32Gi"
+              ephemeral-storage: "400Gi"
+            limits:
+              cpu: "12"
+              memory: "32Gi"
+              ephemeral-storage: "400Gi"
+              nvidia.com/gpu: 1
+          command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
+          args:
+            - >-
+              ./run.sh s3://braingeneers/ephys/2024-08-19-e-3brain-test/shared/Dorsal_3DAccura_00_brw.nwb
+          env:
+            - name: "PYTHONUNBUFFERED"
+              value: "true"
+            - name: "ENDPOINT_URL"
+              value: "https://s3.braingeneers.gi.ucsc.edu"
+            - name: "S3_ENDPOINT"
+              value: "https://s3.braingeneers.gi.ucsc.edu"
+          volumeMounts:
+            - name: "prp-s3-credentials"
+              mountPath: "/root/.aws/credentials"
+              subPath: "credentials"
+            - name: ephemeral
+              mountPath: "/root"
+      tolerations:
+        - key: "msu-cache"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/5g"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/csusb"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/gitlab-issue"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/gpu-untested"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/prism-center"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/sdsc-llm"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/slow-network"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/suncave"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/testing"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "nautilus.io/u55c"
+          operator: "Exists"
+          effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - gpu-01.nrp.mghpcc.org
+                      - gpu-02.nrp.mghpcc.org
+                      - gpu-03.nrp.mghpcc.org
+                      - gpu-04.nrp.mghpcc.org
+                      - gpu-05.nrp.mghpcc.org
+                      - gpu-06.nrp.mghpcc.org
+                      - gpu-07.nrp.mghpcc.org
+                      - gpu-08.nrp.mghpcc.org
+                      - gpu-09.nrp.mghpcc.org
+                      - gpu-10.nrp.mghpcc.org
+                      - gpu-11.nrp.mghpcc.org
+                      - gpu-12.nrp.mghpcc.org
+                      - gpu-13.nrp.mghpcc.org
+                      - gpu-14.nrp.mghpcc.org
+                      - gpu-15.nrp.mghpcc.org
+                      - gpu-16.nrp.mghpcc.org
+                      - gpu-17.nrp.mghpcc.org
+                      - gpu-18.nrp.mghpcc.org
+                      - hcc-nrp-shor-c5809.unl.edu
+                      - hcc-nrp-shor-c5813.unl.edu
+                      - hcc-nrp-shor-c5817.unl.edu
+                      - hcc-nrp-shor-c5821.unl.edu
+                      - hcc-nrp-shor-c5825.unl.edu
+                      - hcc-nrp-shor-c5905.unl.edu
+                      - hcc-nrp-shor-c5909.unl.edu
+                      - hcc-nrp-shor-c5913.unl.edu
+                      - hcc-nrp-shor-c5917.unl.edu
+                      - hcc-nrp-shor-c5921.unl.edu
+                      - hcc-nrp-shor-c5925.unl.edu
+                      - hcc-nrp-shor-c6009.unl.edu
+                      - hcc-nrp-shor-c6013.unl.edu
+                      - hcc-nrp-shor-c6017.unl.edu
+                      - hcc-nrp-shor-c6021.unl.edu
+                      - hcc-nrp-shor-c6025.unl.edu
       restartPolicy: Never
       volumes:
-        # Secrets file for nautilus s3 credentials .aws/credentials and .s3cfg
         - name: prp-s3-credentials
           secret:
             secretName: prp-s3-credentials
         - name: ephemeral
           emptyDir: {}
-
-#        - name: kube-config
-#          secret:
-#            secretName: kube-config
-#        # Shared memory (necessary for Python's multiprocessing.shared_memory module to work)
-#        - name: dshm
-#          emptyDir:
-#            medium: Memory

@@ -20,7 +20,7 @@ TABLE_HEADERS = ["index", "status", "uuid", "experiment",
                  "image", "args", "params", "cpu_request",
                  "memory_request", "disk_request",
                  "GPU", "next_job"]
-CURATION_JOB_INFO = {"image": "surygeng/qm_curation:v0.2",
+CURATION_JOB_INFO = {"image": "surygeng/qm_curation:v0.3",
                     "args": "python si_curation.py",
                     "cpu_request": 8,
                     "memory_request": 32,
@@ -74,14 +74,15 @@ def mqtt_start_job(csv_path, job_index):
 ## run curation for the hunter's uuids 
 if __name__ == '__main__':
     integrated = True
+    nwb = True
     csv_path = "/media/kang/Seagate_External/temp_data/Hunter/catalog_baseline.csv"
     params_file = "curation/params_params_low_ISI.json" 
     print(f"Apply parameter setting by this file {params_file}")
 
     
     if integrated:
-        uuids = ["2023-09-16-efi-mouse-5plex-official"]
-        chip_id = "19943"  # "20402" # "19945" # "19944" # "19943" # "19894"
+        uuids = ["2024-05-24-efi-mouse-7plex-followup"] # ["2024-06-01-efi-mouse-feast"]
+        chip_id = 24442 # 24522 # 24442 # 24645 # 24551 # 24522 # 24646 # "24442"  # "20402" # "19945" # "19944" # "19943" # "19894"
         S3_BUCKET = INTEGRATED_BUCKET
     else:
         uuids = load_hunter_csv(csv_path)
@@ -97,12 +98,19 @@ if __name__ == '__main__':
         
         if integrated:
             uuid_csv = f"{S3_BUCKET}/{uuid}/ephys/"
-            data_path = f"{S3_BUCKET}/{uuid}/ephys/original/data/{chip_id}/"
+            if nwb:
+                data_path = f"{S3_BUCKET}/{uuid}/ephys/shared/{chip_id}/"
+            else:
+                data_path = f"{S3_BUCKET}/{uuid}/ephys/original/data/{chip_id}/"
         else:
             uuid_csv = f"{S3_BUCKET}/{uuid}/"
             data_path = f"{S3_BUCKET}/{uuid}/original/data/"
+
         recs = wr.list_objects(data_path)
-        exp_name = [exp.split("data/")[1] for exp in recs]
+        if nwb:
+            exp_name = [exp.split("shared/")[1] for exp in recs]
+        else:
+            exp_name = [exp.split("data/")[1] for exp in recs]
         print(f"Data path {data_path} has {len(recs)} recordings.")
         for exp in exp_name:
             new_row = {"index": job_index,

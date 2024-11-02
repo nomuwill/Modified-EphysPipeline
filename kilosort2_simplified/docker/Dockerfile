@@ -24,7 +24,7 @@ RUN apt-get install -y python3\
 # python packages \
 # RUN python -m pip install --force-reinstall 'git+https://github.com/SpikeInterface/spikeinterface.git'
 RUN pip install "spikeinterface==0.98.0"
-RUN pip install numpy \
+RUN pip install "numpy==1.24.4" \
     pandas \
     plotly \
     scipy \

@@ -157,7 +157,7 @@ if __name__ == "__main__":
         latency, p_fast = value["latency"], value["p_fast"]
         ccg_peak = np.max(counts)
         # plot figure
-        fig, axs = plt.subplots(figsize=(5, 3), layout="constrained")
+        fig, axs = plt.subplots(figsize=(5, 3))
         plt.suptitle(f"{figure_name}_ccg_unit_{i}_{j}")
         axs.bar(lags, counts, label=f"p_fast={p_fast:.3g} \n count={ccg_peak} \n tiling={tiling:.3f}")
         axs.plot(lags, ccg_smth, color="red")
@@ -166,6 +166,7 @@ if __name__ == "__main__":
         axs.legend()
         axs.set_xlabel("Lags (ms)")
         axs.set_ylabel("Counts")
+        plt.tight_layout()
         plt.savefig(f"{ccg_figure_dir}/ccg_unit_{i}_{j}.png", dpi=300)
         plt.close()
     np.savez(f"{extract_dir}/func_pairs.npz", func_pairs=func_pairs)
@@ -178,14 +179,15 @@ if __name__ == "__main__":
         acg_dict[k] = value
         counts, lags = value["acg"], value["lags"]   
         # plot figure
-        fig, axs = plt.subplots(figsize=(5, 3), layout="constrained")
+        fig, axs = plt.subplots(figsize=(5, 3))
         plt.suptitle(f"{figure_name}_acg_unit_{k}")
         axs.bar(lags, counts)
         axs.set_xlabel("Lags (ms)")
         axs.set_ylabel("Counts")
+        plt.tight_layout()
         plt.savefig(f"{acg_figure_dir}/acg_unit_{k}.png", dpi=300)
         plt.close()
-    np.savez(f"{extract_dir}/acg.npz", func_pairs=func_pairs)
+    np.savez(f"{extract_dir}/acg.npz", acg_dict=acg_dict)
     logging.info(f"Finished running autocorrelation for {len(acg_dict)} units")
 # package exract_dir and upload to s3
 conn_file = shutil.make_archive(posixpath.join(data_folder, "conn"), format="zip", root_dir=extract_dir)

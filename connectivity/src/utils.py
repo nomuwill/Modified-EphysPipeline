@@ -170,8 +170,11 @@ def sparse_train(spike_train: list, bin_size=0.001):
   
 
 def ccg(bt1, bt2, ccg_win=[-10, 10], t_lags_shift=0, bin_size=1):
-    ccg_win = [int(ccg_win[0]), int(ccg_win[1])]
-    left_edge, right_edge = np.subtract(ccg_win, t_lags_shift)
+    if np.all((np.array(ccg_win) / bin_size) % 1) != 0:
+        raise ValueError("The window and shift must be multiples of the bin size")
+    left_edge, right_edge = np.subtract(np.array(ccg_win)/bin_size, t_lags_shift)
+    left_edge = int(left_edge)
+    right_edge = int(right_edge)
     lags = np.arange(ccg_win[0], ccg_win[1] + bin_size, bin_size)
     pad_width = min(max(-left_edge, 0), max(right_edge, 0))
     bt2_pad = np.pad(bt2, pad_width=pad_width, mode='constant')
@@ -215,7 +218,16 @@ def hollow_gaussian_round(sigma=10, truncate=4, kerlen=11, hf=0.6):
     return phi_x * triangle
 
 def hollow_gaussian_filter(counts, sigma=10):
-    return np.convolve(counts, hollow_gaussian_round(sigma=sigma), mode="same")
+    kernel = hollow_gaussian_round(sigma=sigma)
+    pad_width = len(kernel) // 2
+    counts_padded = np.pad(counts, pad_width, mode='reflect')
+    filtered = np.convolve(counts_padded, kernel, mode='valid')
+    # Ensure the output has the same length as input
+    if len(filtered) > len(counts):
+        filtered = filtered[:len(counts)]
+    elif len(filtered) < len(counts):
+        filtered = np.pad(filtered, (0, len(counts) - len(filtered)))
+    return filtered
 
 def spike_time_tiling(tA, tB, delt=0.02, length=None):
     """

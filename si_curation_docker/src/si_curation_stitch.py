@@ -1,0 +1,585 @@
+# curate by spikeinterface quality metrics and curation
+import spikeinterface as si
+import spikeinterface.extractors as se
+import spikeinterface.core as sc
+import spikeinterface.curation as curation
+import spikeinterface.qualitymetrics as sqm
+from spikeinterface.extractors.neoextractors import MaxwellRecordingExtractor
+import spikeinterface.preprocessing as spre
+import sys
+import posixpath
+import os
+import shutil
+import braingeneers.utils.s3wrangler as wr
+from utils import *
+import logging
+import h5py
+import time 
+import json
+
+# BUCKET = "s3://braingeneers/ephys/"
+JOB_KWARGS = dict(n_jobs=10, progress_bar=True)
+hdf5_plugin_path = '/src/'
+# os.environ["HDF5_PLUGIN_PATH"] = hdf5_plugin_path
+LOG_FILE_NAME = "run_autocuration.log"
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(message)s',
+                    handlers=[logging.FileHandler(LOG_FILE_NAME, mode="a"),
+                              stream_handler])
+
+DEFUALT_PARAMS = {"min_snr": 5,
+                  "min_fr": 0.1,
+                  "max_isi_viol": 0.2}
+
+def setup_hdf5():
+    # os.environ['HDF5_PLUGIN_PATH'] = hdf5_plugin_path
+    # copy the plugin to "/usr/local/hdf5/lib/plugin" to make sure this file can be found by the script
+    path_to_lib = os.path.join(hdf5_plugin_path, "libcompression.so")
+    if os.path.isfile(path_to_lib):
+        os.makedirs("/usr/local/hdf5/lib/plugin/")
+        shutil.copy(path_to_lib, "/usr/local/hdf5/lib/plugin/libcompression.so")
+    else:
+        logging.info("Maxwell hdf5 plugin not found")
+    os.environ['HDF5_PLUGIN_PATH'] = "/usr/local/hdf5/lib/plugin/"
+
+class QualityMetrics:
+    """
+    curation by quality metrics using spikeinterface API
+
+    """
+
+    def __init__(self, base_folder, rec_name, phy_folder, 
+                 data_format=None, params_dict={},
+                 max_spikes_waveform=500,
+                 default=True):
+        self.redundant_pairs = None
+        self.extract_path = None
+        self.rec_name = rec_name
+        # self._rec_path = posixpath.join(base_folder, rec_name)
+        self.base_folder = base_folder
+        self.data_format = data_format
+        self.clean_folder = posixpath.join(base_folder, "cleaned_waveforms")
+
+        phy_result = se.KiloSortSortingExtractor(phy_folder)
+        self.phy_result = phy_result.remove_empty_units()
+        if "min_snr" in params_dict:
+            self._snr_thres = params_dict["min_snr"]
+        else:
+            self._snr_thres = DEFUALT_PARAMS["min_snr"]
+        if "min_fr" in params_dict:
+            self._fr_thres = params_dict["min_fr"]
+        else:
+            self._fr_thres = DEFUALT_PARAMS["min_fr"]
+        if "max_isi_viol" in params_dict:
+            self._isi_viol_thres = params_dict["max_isi_viol"]
+        else:
+            self._isi_viol_thres = DEFUALT_PARAMS["max_isi_viol"]
+        
+        updated_params = {"min_snr": self._snr_thres,
+                          "min_fr": self._fr_thres,
+                          "max_isi_viol": self._isi_viol_thres}
+        # Write the parameters to a json file 
+        self.saved_param_file = posixpath.join(self.base_folder, "curation_params.json")
+        with open(self.saved_param_file, "w") as f:
+            json.dump(updated_params, f)
+        
+        # extract waveforms
+        self.we = self.extract_waveforms(max_spikes=max_spikes_waveform)
+        print("waveforms", self.we)
+        if default:  # to leave space for other curation methods
+            self.curated_ids, self.all_remove_ids = self.default_curation()
+
+        logging.info("Saving cleaned units...")
+        self.we_clean = self.we.select_units(self.curated_ids, self.clean_folder)
+        print("Saved ", self.we_clean)
+
+
+    def default_curation(self):
+        all_remove_ids = set()
+        ids = self.curate_by_snr
+        all_remove_ids.update(ids)
+        ids = self.curate_by_isi()
+        all_remove_ids.update(ids)
+        ids = self.curate_by_fr()
+        all_remove_ids.update(ids)
+        # ids = self.curate_by_redundant()  # output the cleaned units and the original/remove list
+        # all_remove_ids.update(ids)
+        self.redundant_pairs = self.curate_by_redundant()
+
+        logging.info(f"Total number of units to remove: {len(all_remove_ids)}")
+
+        curated_excess = curation.remove_excess_spikes(self.we.sorting, self.we.recording)
+        self.we.sorting = curated_excess
+        return curated_excess.unit_ids, list(all_remove_ids)
+
+    def prepare_rec(self, low=300., high=6000., common_ref=True):
+        recording_list = []
+        if self.data_format == "Maxwell":
+            for rec in self.rec_name:
+                file_path = posixpath.join(self.base_folder, rec)
+                read_rec = se.read_maxwell(file_path=file_path)
+                gain_uv = read_maxwell_gain(file_path)
+                rec_scale = spre.ScaleRecording(read_rec, gain=gain_uv)
+                rec_filt = spre.bandpass_filter(rec_scale, freq_min=low, freq_max=high, dtype="float32")
+                if common_ref:
+                    rec_filt = spre.common_reference(rec_filt)
+                recording_list.append(rec_filt)
+        elif self.data_format == "nwb":
+            for rec in self.rec_name:
+                file_path = posixpath.join(self.base_folder, rec)
+                read_rec = se.read_nwb(file_path=file_path)
+                rec_filt = spre.bandpass_filter(read_rec, freq_min=low, freq_max=high, dtype="float32")
+                if common_ref:
+                    rec_filt = spre.common_reference(rec_filt)
+                recording_list.append(rec_filt)
+        if len(recording_list) > 1:
+            rec_pre = si.concatenate_recordings(recording_list)
+        else:
+            rec_pre = recording_list[0]
+        return rec_pre
+
+
+    def extract_waveforms(self, ms_before=2., ms_after=3., max_spikes=500):
+        rec_pre = self.prepare_rec()
+        self.extract_path = posixpath.join(self.base_folder, "extract_waveforms")
+        if os.path.isdir(self.extract_path):
+            we = sc.WaveformExtractor.load(folder=self.extract_path)
+        else:
+            we = sc.WaveformExtractor(rec_pre, self.phy_result, self.base_folder, allow_unfiltered=False)
+            we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes)
+            we.run_extract_waveforms(**JOB_KWARGS)
+            we.save(self.extract_path, overwrite=True)
+        return we
+
+    def compute_noise_level(self):
+        rec_pre = self.prepare_rec()
+        noise_levels_mv = si.get_noise_levels(rec_pre, return_scaled=True)
+        return noise_levels_mv
+
+    @property
+    def curate_by_snr(self):
+        num_units = len(self.we.unit_ids)
+        snr = sqm.compute_snrs(self.we)
+        remove_ids = []
+        for k, v in snr.items():
+            if v < self._snr_thres:
+                remove_ids.append(k)
+        cleaned_sorting = self.we.sorting.remove_units(remove_ids)
+        self.we.sorting = cleaned_sorting
+        logging.info(f"Curated by SNR of {self._snr_thres} rms. "
+                     f"Remove number of units: {len(remove_ids)}/{num_units}")
+        return remove_ids
+
+    def curate_by_isi(self):
+        """
+        ISI violation by Hill method with 1.5 ms refactory period
+        """
+        num_units = len(self.we.unit_ids)
+        isi_viol_ratio, isi_viol_num = sqm.compute_isi_violations(self.we)
+        remove_ids = []
+        for k, v in isi_viol_ratio.items():
+            if v > self._isi_viol_thres:
+                remove_ids.append(k)
+        cleaned_sorting = self.we.sorting.remove_units(remove_ids)
+        self.we.sorting = cleaned_sorting
+        logging.info(f"Curated by ISI violation (Hill method) "
+                     f"of {self._isi_viol_thres}/1 of 1.5 ms refactory period. "
+                     f"Remove number of units: {len(remove_ids)}/{num_units}")
+        return remove_ids
+    
+    def curate_by_isi_ratio(self):
+        """
+        ISI violation by ratio defined as number of violations over total number of spikes
+        """
+        # TODO
+
+        
+        pass
+
+    def curate_by_fr(self):
+        num_units = len(self.we.unit_ids)
+        firing_rate = sqm.compute_firing_rates(self.we)
+        remove_ids = []
+        for k, v in firing_rate.items():
+            if v < self._fr_thres:
+                remove_ids.append(k)
+        cleaned_sorting = self.we.sorting.remove_units(remove_ids)
+        self.we.sorting = cleaned_sorting
+        logging.info(f"Curated by firing rate of {self._fr_thres} Hz. "
+                     f"Remove number of units: {len(remove_ids)}/{num_units}")
+        return remove_ids
+
+    def curate_by_redundant(self):
+        num_units = len(self.we.unit_ids)
+        curated_redundant, redundant_unit_pairs = \
+            curation.remove_redundant_units(self.we, align=False,
+                                            remove_strategy="max_spikes", extra_outputs=True)
+        print("done redundant")
+
+        remove_ids = np.setdiff1d(self.we.sorting.unit_ids, curated_redundant.unit_ids)
+        logging.info(f"Curated by checking redundant units (Function turned off, no unit removed). "
+                     f"Found number of units to remove: {len(remove_ids)}/{num_units}")
+        # self.we.sorting = curated_redundant
+        # return remove_ids
+        return redundant_unit_pairs
+
+    def package_cleaned(self):
+        spike_data = self.compile_data()
+        curated_file = 'qm.npz'
+        curated_folder = posixpath.join(self.base_folder, "curated")
+        if not os.path.isdir(curated_folder):
+            os.mkdir(curated_folder)
+        qm_npz = posixpath.join(curated_folder, curated_file)
+        np.savez(qm_npz, **spike_data)
+        shutil.move(LOG_FILE_NAME, curated_folder)
+        logging.info(f"logging files move to {curated_folder}")
+        # if stitched_inds.json exists, move it to the curated folder
+        for file in os.listdir(self.base_folder):
+            if file.endswith("stitch_inds.json"):
+                shutil.copy(posixpath.join(self.base_folder, file), curated_folder)
+                logging.info(f"{file} copied to {curated_folder}")
+        # alse copy the parameter file
+        shutil.copy(self.saved_param_file, curated_folder)
+        # package the cleaned data
+        qm_file = shutil.make_archive(posixpath.join(self.base_folder, "qm"), format="zip", root_dir=curated_folder)
+        logging.info(f"Cleaned data saved to {qm_file}")
+        # also package waveforms
+        rec_attr = posixpath.join(self.extract_path, "recording_info", "recording_attributes.json")
+        if os.path.isfile(rec_attr):
+            shutil.copy(rec_attr, self.clean_folder)
+        # wf_file = shutil.make_archive(posixpath.join(self.base_folder, "wf"), format="zip", root_dir=self.clean_folder)
+        wf_file = None
+        return qm_file, wf_file
+
+    def compile_data(self, n=12):
+        """
+        compile the cleaned sorting to npz with braingeneers compatible structure
+        """
+        templates = self.we_clean.get_all_templates()
+        clusters = self.we_clean.unit_ids
+        nc = len(clusters)
+        channels = self.we_clean.recording.get_channel_ids()
+        positions = self.we_clean.recording.get_channel_locations()
+        best_channels = get_best_channel_cluster(clusters, channels, templates)
+        neuron_dict = dict.fromkeys(np.arange(nc), None)
+        for i in range(nc):
+            c = clusters[i]
+            temp = templates[i]
+            sorted_idx = sort_template_amplitude(temp)[:n]
+            temp = temp.T
+            best_idx = sorted_idx[0]
+            neuron_dict[i] = {"cluster_id": c, "channel": best_channels[c],
+                              "position": positions[best_idx],
+                              "template": temp[best_idx],
+                              "neighbor_channels": channels[sorted_idx],
+                              "neighbor_positions": positions[sorted_idx],
+                              "neighbor_templates": temp[sorted_idx]
+                              }
+        # get electrode configuration 
+        config = {}
+        if self.data_format == "Maxwell":
+            logging.info(f"Reading electrode configuration for {self.data_format} data format")
+            
+            for rec in self.rec_name:
+                self._rec_path = posixpath.join(self.base_folder, rec)
+                config[rec] = read_maxwell_mapping(self._rec_path)
+        else:
+            logging.info(f"Electrode configuration not available for {self.data_format} data format")
+            
+        spike_data = {"train": {c: self.we_clean.sorting.get_unit_spike_train(c)
+                                for c in clusters},
+                      "neuron_data": neuron_dict,
+                      "config": config,
+                      "redundant_pairs": self.redundant_pairs,
+                      "fs": self.we_clean.recording.sampling_frequency}
+        logging.info(f"Compiled data for {nc} cleaned units")
+        return spike_data
+
+def read_maxwell_gain(h5_file):
+    dataset = h5py.File(h5_file, 'r')
+    if 'mapping' in dataset.keys():
+        gain_uv = dataset['settings']['lsb'][0] * 1e6
+    else:
+        gain_uv = dataset['recordings']['rec0000']['well000']['settings']['lsb'][0] * 1e6
+    return gain_uv
+
+
+def read_maxwell_mapping(h5_file):
+    with h5py.File(h5_file, 'r') as dataset:
+        if 'version' and 'mxw_version' in dataset.keys():
+            mapping = dataset['recordings']['rec0000']['well000']['settings']['mapping']
+            config = {'pos_x': np.array(mapping['x']),
+                      'pos_y': np.array(mapping['y']),
+                      'channel': np.array(mapping['channel']),
+                      'electrode': np.array(mapping['electrode'])}
+        else:
+            mapping = dataset['mapping']
+            config = {'pos_x': np.array(mapping['x']),
+                      'pos_y': np.array(mapping['y']),
+                      'channel': np.array(mapping['channel']),
+                      'electrode': np.array(mapping['electrode'])}
+    return config
+
+
+
+def get_parent_data(neuron_dict):
+    parent_id_dict = {v["cluster_id"]: v for _, v in neuron_dict.items()}
+    parent_ids = list(parent_id_dict.keys())
+    return parent_ids, parent_id_dict
+
+
+def select_units(spike_train, neuron_dict, selected_ids):
+    parent_ids, parent_dict = get_parent_data(neuron_dict)
+    update_dict = {}
+    update_trains = []
+    for i in range(len(selected_ids)):
+        id = selected_ids[i]
+        update_dict[i] = parent_dict[id]
+        update_trains.append(spike_train[parent_ids.index(id)])
+    return update_trains, update_dict
+
+
+def remove_units(spike_train, neuron_dict, removed_ids):
+    parent_ids, _ = get_parent_data(neuron_dict)
+    selected_ids = np.setdiff1d(parent_ids, removed_ids)
+    update_trains, update_dict = select_units(spike_train, neuron_dict, selected_ids)
+    return update_trains, update_dict
+
+
+def upload_file(phy_path, local_file, params_file_name=None):
+    # create upload path by appending parameter file to the phy path and hash string
+    if params_file_name is None:
+        upload_path = phy_path.replace("_phy.zip", "_acqm.zip")
+    else:
+        upload_path = phy_path.replace("_phy.zip", f"_{params_file_name}_acqm.zip")
+    if "stitch" in upload_path:
+        upload_path = upload_path.replace("stitched", "autocuration")
+    elif "kilosort2" in upload_path:
+        upload_path = upload_path.replace("kilosort2", "autocuration")
+    else:
+        upload_path = phy_path  # default to the same folder
+    logging.info(f"Uploading data from {local_file} to {upload_path} ...")
+    # wr.upload(local_file=local_file, path=upload_path)
+    upload_s3_with_retry(local_file, upload_path)
+    logging.info("Done!")
+
+
+
+def parse_uuid(data_path):
+    experiment = data_path.split("/")[-1]
+    base_path = data_path.split(experiment)[0]
+    if "original/data" in base_path:
+        phy_base_path = base_path.replace("original/data", "derived/kilosort2")
+        metadata_path = base_path.split("original/data")[0] + "metadata.json"
+    elif "shared" in base_path:
+        phy_base_path = base_path.replace("shared", "derived/kilosort2")
+        metadata_path = base_path.split("shared")[0] + "metadata.json"
+        
+    if experiment.endswith(".raw.h5"):
+        experiment = experiment.split(".raw.h5")[0]
+    elif experiment.endswith(".h5"):
+        pass
+    else:
+        experiment = experiment.split(".")[0]
+    phy_path = posixpath.join(phy_base_path, experiment + "_phy.zip")
+    return base_path, experiment, metadata_path, phy_path
+
+def hash_file_name(input_string):
+    import hashlib
+    md5_hash = hashlib.md5()
+    md5_hash.update(input_string.encode('utf-8'))
+    hash_string = md5_hash.hexdigest()
+    return hash_string
+
+def cancatenate_recordings(data_paths):
+    recording_list = []
+    num_data = len(data_paths)
+    for i in range(num_data):
+        data_path = data_paths[i]
+        print(f"Appending {i+1}/{num_data}", data_path)
+        recording = se.read_maxwell(data_path, install_maxwell_plugin=True)
+        recording_f = spre.bandpass_filter(recording, freq_min=300, freq_max=6000)
+        recording_cmr = spre.common_reference(recording_f, reference='global', operator='median')
+        recording_list.append(recording_cmr)
+    multirecording = si.concatenate_recordings(recording_list)
+    return multirecording
+
+def download_s3_with_retry(src_s3_path: str, dst_local_path: str, retries=5) -> str:
+    attempt = 0
+    while attempt < retries:
+        try:
+            wr.download(src_s3_path, dst_local_path)
+            print(f'Now downloading "{src_s3_path}" to "{dst_local_path}"')
+            return dst_local_path
+        except Exception as e:
+            attempt += 1
+            wait_time = 2 ** attempt  # Exponential backoff
+            print(f"Read timeout. Retrying in {wait_time} seconds... (Attempt {attempt}/{retries})")
+            time.sleep(wait_time)
+
+def upload_s3_with_retry(src_local_path: str, dst_s3_path: str, retries=5) -> str:
+    attempt = 0
+    while attempt < retries:
+        try:
+            wr.upload(local_file=src_local_path, path=dst_s3_path)
+            print(f'Upload successful: "{dst_s3_path}"')
+            return dst_s3_path
+        except Exception as e:
+            attempt += 1
+            wait_time = 2 ** attempt  # Exponential backoff
+            print(f"Read timeout. Retrying in {wait_time} seconds... (Attempt {attempt}/{retries})")
+            time.sleep(wait_time)
+
+
+
+if __name__ == "__main__":
+    # test data: s3://braingeneers/ephys/2024-01-05-e-uploader-test/original/data/test_0.raw.h5 
+    # test parameter: s3://braingeneers/services/mqtt_job_listener/params/curation/params_1.json
+
+    # check input length 
+    if len(sys.argv) < 3 or len(sys.argv) > 4:
+        logging.info("Please provide the data path, parameter file path, and optional phy path")
+        sys.exit(1)
+    elif len(sys.argv) == 3:
+        logging.info("Data path and parameter file path provided. Use default phy path from the pipeline.")
+        data_path = sys.argv[1]
+        param_path = sys.argv[2]
+        given_phy_path = None
+    else:  # len(sys.argv) == 4
+        logging.info("Data path, parameter file path, and phy path provided.")
+        data_path = sys.argv[1]
+        param_path = sys.argv[2]
+        given_phy_path = sys.argv[3]
+
+    data_path = data_path.replace(" ", "")
+    params_file_name = param_path.split("/")[-1].split(".")[0]
+
+    # identify stitched data path
+    if "," in data_path:
+        logging.info("Stitched data path detected. Use the first path to identify data format.")
+        data_path_list = data_path.split(",")
+        data_path = data_path_list[0]
+    else:
+        data_path_list = [data_path]
+
+    s3_base_path, experiment, metadata_path, phy_path = parse_uuid(data_path=data_path)
+
+    if given_phy_path is not None:
+        logging.info("Use given phy path for curation. ")
+        phy_path = given_phy_path
+
+    logging.info(f"S3 base: {s3_base_path}")
+    logging.info(f"S3 path for recording(s): {data_path_list}")  # original recording s3 full path
+    logging.info(f"Metadata path: {metadata_path}")
+    logging.info(f"Phy path: {phy_path}")
+    logging.info(f"Parameter file path: {param_path}")
+
+    logging.info("Setup hdf5 plugin for Maxwell data.")
+    setup_hdf5()
+
+    # download file from s3
+    # current_folder = os.getcwd()
+    current_folder = "/tmp"   # to make sure the volumn mount works
+    subfolder = "/data"
+    base_folder = current_folder + subfolder
+
+    if not os.path.isdir(base_folder):
+        os.mkdir(base_folder)
+    print(base_folder)
+    extract_dir = base_folder + "/kilosort_result"
+    kilosort_local_path = posixpath.join(base_folder, "kilosort_result.zip")
+    metadata_local_path = posixpath.join(base_folder, "metadata.json")
+
+    for p in [phy_path, param_path] + data_path_list:
+        try:
+            assert wr.does_object_exist(p)
+        except AssertionError as err:
+            logging.exception(f"File doesn't exist on S3! {p}")
+            logging.info("Program exited.")
+            raise err
+    
+    # download metadata
+    if wr.does_object_exist(metadata_path):
+        logging.info("Start downloading metadata ...")
+        # wr.download(metadata_path, metadata_local_path)
+        download_s3_with_retry(metadata_path, metadata_local_path)
+        logging.info("Done!")
+        with open(metadata_local_path, "r") as f:
+            metadata = json.load(f)
+            if (experiment in metadata["ephys_experiments"]) and \
+                    ("data_format" in metadata["ephys_experiments"][experiment]):
+                data_format = metadata["ephys_experiments"][experiment]["data_format"]
+                logging.info(f"Read data format from metadata.json, format is {data_format}")
+            else:
+                data_format = "Maxwell"  # a patch for the old metadata.json
+                logging.info(f"Data format not found in metadata.json, default to Maxwell")
+    else:
+        logging.info("Metadata file not found. Skip downloading metadata.")
+        logging.info("Data format default to Maxwell")
+        data_format = "Maxwell"
+
+    # download phy.zip
+    logging.info("Start downloading kilosort result ...")
+    # wr.download(phy_path, kilosort_local_path)
+    download_s3_with_retry(phy_path, kilosort_local_path)
+    logging.info("Done!")
+
+    shutil.unpack_archive(kilosort_local_path, extract_dir, "zip")
+
+    # download raw data
+    logging.info("Start downloading raw data ...")
+    rec_name = []
+    for i in range(len(data_path_list)):
+        logging.info(f"Downloading recording {i+1}/{len(data_path_list)} ...")
+        dp = data_path_list[i]
+        exp = f"rec_{i}"
+        exp_local_path = posixpath.join(base_folder, exp)
+        # wr.download(data_path, exp_local_path)
+        download_s3_with_retry(data_path, exp_local_path)
+        rec_name.append(exp)
+        logging.info(f"Downloaded {dp} to {exp_local_path}")
+    logging.info("Done")
+
+    # download param file
+    logging.info("Start downloading parameter file ...")
+    param_file = posixpath.join(base_folder, "params.json")
+    # wr.download(param_path, param_file)
+    download_s3_with_retry(param_path, param_file)
+    logging.info("Done")
+    with open(param_file, "r") as f:
+        params_dict = json.load(f)
+    
+    if len(params_dict) > 0:
+        logging.info(f"Use parameters {params_dict} from file {param_path} for curation")
+    else:
+        params_file_name = "params_default"
+        logging.info(f"User parameters not available. Use default parameters {DEFUALT_PARAMS} for curation")
+
+    # if stitched, download stitch_inds.json
+    if phy_path.endswith("stitch_phy.zip"):
+        stitched_json_path = phy_path.replace("stitch_phy.zip", "stitch_inds.json")
+        if wr.does_object_exist(stitched_json_path):
+            logging.info("stitch_inds.json exists. Start downloading ...")
+            stitch_local_path = posixpath.join(base_folder, stitched_json_path.split("/")[-1])
+            # wr.download(stitched_json_path, stitch_local_path)
+            download_s3_with_retry(stitched_json_path, stitch_local_path)
+            logging.info(f"Downloaded {stitched_json_path} to {stitch_local_path}")
+            logging.info("Done!")
+        else:
+            logging.info("stitch_inds.json not found. Skip downloading.")
+
+
+    # do curation
+    curation = QualityMetrics(base_folder=base_folder, 
+                              rec_name=rec_name, 
+                              phy_folder=extract_dir,
+                              data_format=data_format, 
+                              params_dict=params_dict)
+    qm_file, wf_file = curation.package_cleaned()
+
+    # curated_file = experiment + "_qm.zip"
+    # waveform_file = experiment + "_wf.zip"
+    upload_file(phy_path, qm_file, params_file_name)
+    # upload_file(uuid, wf_file, waveform_file)

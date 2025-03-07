@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: sjg-simplified-test-3b-1
+  name: sjg-simplified-test-3b-2
 spec:
   backoffLimit: 2
   template:
@@ -13,17 +13,17 @@ spec:
           resources:
             requests:
               cpu: "12"
-              memory: "32Gi"
-              ephemeral-storage: "400Gi"
+              memory: "64Gi"
+              ephemeral-storage: "600Gi"
             limits:
               cpu: "12"
-              memory: "32Gi"
-              ephemeral-storage: "400Gi"
+              memory: "64Gi"
+              ephemeral-storage: "600Gi"
               nvidia.com/gpu: 1
           command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
           args:
             - >-
-              ./run.sh s3://braingeneers/ephys/2024-08-19-e-3brain-test/shared/Dorsal_3DAccura_00_brw.nwb
+              ./run.sh s3://braingeneers/ephys/2024-10-31-e-SmitsMidbrain/original/data/24481_SmitsMO_D49_sect300_20241031.raw.h5
           env:
             - name: "PYTHONUNBUFFERED"
               value: "true"
@@ -37,40 +37,40 @@ spec:
               subPath: "credentials"
             - name: ephemeral
               mountPath: "/root"
-      tolerations:
-        - key: "msu-cache"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/5g"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/csusb"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/gitlab-issue"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/gpu-untested"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/prism-center"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/sdsc-llm"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/slow-network"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/suncave"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/testing"
-          operator: "Exists"
-          effect: "NoSchedule"
-        - key: "nautilus.io/u55c"
-          operator: "Exists"
-          effect: "NoSchedule"
+      # tolerations:
+      #   - key: "msu-cache"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/5g"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/csusb"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/gitlab-issue"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/gpu-untested"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/prism-center"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/sdsc-llm"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/slow-network"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/suncave"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/testing"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+      #   - key: "nautilus.io/u55c"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

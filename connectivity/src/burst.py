@@ -137,13 +137,15 @@ class Network:
                 counts, lags = utils.ccg(self.sparse_train[i],
                                          self.sparse_train[j],
                                          ccg_win=self.ccg_window, 
-                                         bin_size=self.binary_bin_size*1000)
+                                         bin_size=self.binary_bin_size *1000)
                 max_ind = np.argmax(counts)
                 latency = lags[max_ind]
                 if latency >= -self.func_latency and latency <= self.func_latency:
+                    # round the latency to the 3 decimal places
+                    latency = round(latency, 3)
                     if max_ind != np.diff(self.ccg_window)//2:
                         # ccg_smth = gaussian_filter1d(counts, sigma=10)   
-                        ccg_smth = utils.hollow_gaussian_filter(counts, sigma=10) 
+                        ccg_smth = utils.hollow_gaussian_filter(counts, sigma=10/(self.binary_bin_size*1000)) 
                         lambda_slow_peak = ccg_smth[max_ind]
                         ccg_peak = int(counts[max_ind])
                         # estimate p_fast

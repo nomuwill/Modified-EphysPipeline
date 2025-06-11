@@ -149,6 +149,11 @@ def extract_recording(rec_path, output_folder, format):
     elif format == "nwb":
         rec = se.read_nwb(rec_path)
     # filter and convert to binary recording
+
+    if float(rec.get_sampling_frequency()) < 20000.:
+        logging.warning("Sampling frequency is less than 20 kHz, setting the bandpass filter to 300-4600 Hz instead of 300-6000 Hz.")
+        band_max = 4600
+
     rec_filter = sp.bandpass_filter(rec, freq_min=band_min, freq_max=band_max, dtype="float32")
     binary_file_path = os.path.join(output_folder, 'recording.dat')
     se.BinaryRecordingExtractor.write_recording(
@@ -170,7 +175,7 @@ if __name__ == "__main__":
     metadata_path = "/project/SpikeSorting/metadata.json"
     parameter_path = "/project/SpikeSorting/parameters.json"
     if not os.path.isfile(metadata_path):
-        logging.error("Error: metadata.json not available. Data format default to Maxwell.")
+        logging.error("Note: metadata.json not available. Data format default to Maxwell.")
         data_format = "Maxwell"
     else:
         with open(metadata_path, 'r') as f:
@@ -184,7 +189,7 @@ if __name__ == "__main__":
             logging.info(f"Data format not found in metadata.json, default to Maxwell")
     if not os.path.isfile(parameter_path):
         params = DEFUALT_PARAMS
-        logging.error(f"Error: parameters.json not available. Using updated default parameters for curation. {params}")
+        logging.error(f"Note: parameters.json not available. Using updated default parameters for curation. {params}")
         
     else:
         params = utils.load_paramter(parameter_path)   # TODO: save with kilosort parameters to the parameter_setting.json

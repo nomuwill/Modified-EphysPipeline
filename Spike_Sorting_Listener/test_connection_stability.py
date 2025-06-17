@@ -136,7 +136,7 @@ def main():
         test_backoff_logic()
         
         print("\n" + "=" * 60)
-        print("✅ All connection stability tests completed!")
+        print("All connection stability tests completed!")
         print("\nKey Improvements Validated:")
         print("  - InvalidChunkLength error recovery")
         print("  - Progressive backoff for consecutive failures")
@@ -144,7 +144,7 @@ def main():
         print("  - Fresh API client creation per attempt")
         
     except Exception as e:
-        print(f"\n❌ Test failed: {e}")
+        print(f"\nTest failed: {e}")
         import traceback
         traceback.print_exc()
         return 1

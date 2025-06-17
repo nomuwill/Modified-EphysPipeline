@@ -47,7 +47,7 @@ def check_pipeline_logic():
         
         for data_format, file_path, expected in test_cases:
             result = is_maxtwo_recording(data_format, file_path)
-            status = "✅ PASS" if result == expected else "❌ FAIL"
+            status = "PASS" if result == expected else "FAIL"
             print(f"  {status} format='{data_format}', path='{file_path}' -> {result}")
         
         # Test pipeline routing
@@ -61,11 +61,11 @@ def check_pipeline_logic():
         
         def mock_spawn_splitter_fanout(*args):
             pipeline_calls['spawn_splitter_fanout'].append(args)
-            print(f"  🔄 MaxTwo pipeline called with: {args[0:2]}")
+            print(f"  MaxTwo pipeline called with: {args[0:2]}")
             
         def mock_create_sort(*args):
             pipeline_calls['create_sort'].append(args)
-            print(f"  ⚡ Regular sorting called with: {args}")
+            print(f"  Regular sorting called with: {args}")
         
         # Mock functions
         mock_functions = {
@@ -101,9 +101,9 @@ def check_pipeline_logic():
         print(f"  Regular sorting calls: {len(pipeline_calls['create_sort'])}")
         
         if len(pipeline_calls['spawn_splitter_fanout']) == 1 and len(pipeline_calls['create_sort']) == 0:
-            print("  ✅ MaxTwo correctly triggered ONLY MaxTwo pipeline")
+            print("  MaxTwo correctly triggered ONLY MaxTwo pipeline")
         else:
-            print("  ❌ MaxTwo pipeline routing FAILED")
+            print("  MaxTwo pipeline routing FAILED")
             
         # Test MaxOne recording  
         print("\n--- MaxOne Recording ---")
@@ -129,9 +129,9 @@ def check_pipeline_logic():
         print(f"  Regular sorting calls: {len(pipeline_calls['create_sort'])}")
         
         if len(pipeline_calls['spawn_splitter_fanout']) == 0 and len(pipeline_calls['create_sort']) == 1:
-            print("  ✅ MaxOne correctly triggered ONLY regular pipeline")
+            print("  MaxOne correctly triggered ONLY regular pipeline")
         else:
-            print("  ❌ MaxOne pipeline routing FAILED")
+            print("  MaxOne pipeline routing FAILED")
 
 def main():
     """Run all checks."""
@@ -139,7 +139,7 @@ def main():
         check_pipeline_logic()
         return 0
     except Exception as e:
-        print(f"\n❌ ERROR: {e}")
+        print(f"\nERROR: {e}")
         import traceback
         traceback.print_exc()
         return 1

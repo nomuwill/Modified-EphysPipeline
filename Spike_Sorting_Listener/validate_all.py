@@ -17,17 +17,17 @@ def test_imports():
     try:
         # Test job_utils import
         from job_utils import format_job_name, JOB_PREFIX, NAMESPACE, DEFAULT_S3_BUCKET
-        print("✅ job_utils imported successfully")
+        print("job_utils imported successfully")
         
         # Test job name formatting
         test_name = format_job_name("test-experiment-well001", prefix="spike-")
-        print(f"✅ Job name formatting works: {test_name}")
+        print(f"Job name formatting works: {test_name}")
         
         # Test constants
-        print(f"✅ Constants accessible: {JOB_PREFIX}, {NAMESPACE}, {DEFAULT_S3_BUCKET}")
+        print(f"Constants accessible: {JOB_PREFIX}, {NAMESPACE}, {DEFAULT_S3_BUCKET}")
         
     except Exception as e:
-        print(f"❌ job_utils import failed: {e}")
+        print(f"job_utils import failed: {e}")
         return False
     
     try:
@@ -40,16 +40,16 @@ def test_imports():
             'k8s_kilosort2': unittest.mock.MagicMock()
         }):
             from mqtt_listener import is_maxtwo_recording, get_splitter_config, get_sorter_template
-            print("✅ mqtt_listener functions imported successfully")
+            print("mqtt_listener functions imported successfully")
             
             # Test MaxTwo detection
             assert is_maxtwo_recording("maxtwo", "test.raw.h5") == True
             assert is_maxtwo_recording("maxone", "test.raw.h5") == False  
             assert is_maxtwo_recording("maxtwo", "test.txt") == False
-            print("✅ is_maxtwo_recording logic works correctly")
+            print("is_maxtwo_recording logic works correctly")
             
     except Exception as e:
-        print(f"❌ mqtt_listener import failed: {e}")
+        print(f"mqtt_listener import failed: {e}")
         return False
     
     try:
@@ -61,10 +61,10 @@ def test_imports():
             'k8s_kilosort2': unittest.mock.MagicMock()
         }):
             from splitter_fanout import spawn_splitter_fanout, _safe_get_job_status
-            print("✅ splitter_fanout functions imported successfully")
+            print("splitter_fanout functions imported successfully")
             
     except Exception as e:
-        print(f"❌ splitter_fanout import failed: {e}")
+        print(f"splitter_fanout import failed: {e}")
         return False
     
     return True
@@ -99,13 +99,13 @@ def test_logic():
             for data_format, file_path, expected in test_cases:
                 result = is_maxtwo_recording(data_format, file_path)
                 if result != expected:
-                    print(f"❌ Failed: {data_format}, {file_path} -> {result}, expected {expected}")
+                    print(f"FAILED: {data_format}, {file_path} -> {result}, expected {expected}")
                     return False
                 else:
-                    print(f"✅ Passed: {data_format}, {file_path} -> {result}")
+                    print(f"PASSED: {data_format}, {file_path} -> {result}")
                     
     except Exception as e:
-        print(f"❌ Logic test failed: {e}")
+        print(f"Logic test failed: {e}")
         return False
     
     return True
@@ -126,10 +126,10 @@ def main():
     
     print("\n" + "=" * 60)
     if success:
-        print("✅ ALL VALIDATION TESTS PASSED")
+        print("ALL VALIDATION TESTS PASSED")
         print("The MaxTwo pipeline is ready for deployment!")
     else:
-        print("❌ VALIDATION FAILED")
+        print("VALIDATION FAILED")
         print("Please fix the issues before deployment.")
     print("=" * 60)
     

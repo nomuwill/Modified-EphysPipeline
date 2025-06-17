@@ -47,7 +47,7 @@ def test_maxtwo_detection():
     all_passed = True
     for data_format, file_path, expected in test_cases:
         result = is_maxtwo_recording(data_format, file_path)
-        status = "✓" if result == expected else "✗"
+        status = "PASS" if result == expected else "FAIL"
         print(f"  {status} format='{data_format}', extension='{file_path.split('.')[-1]}' -> {result}")
         if result != expected:
             print(f"    Expected: {expected}, Got: {result}")
@@ -76,7 +76,7 @@ def test_job_naming():
         valid_end = job_name[-1].isalnum() if job_name else False
         
         all_valid = valid_length and valid_chars and valid_start and valid_end
-        status = "✓" if all_valid else "✗"
+        status = "PASS" if all_valid else "FAIL"
         print(f"  {status} '{experiment}' -> '{job_name}' (len: {len(job_name)})")
         
         if not all_valid:
@@ -134,7 +134,7 @@ def test_pipeline_logic():
             pipeline = "unknown"
         
         correct = pipeline == scenario["expected"]
-        status = "✓" if correct else "✗"
+        status = "PASS" if correct else "FAIL"
         print(f"  {status} {scenario['name']}: {scenario['data_format']} -> {pipeline}")
         
         if not correct:

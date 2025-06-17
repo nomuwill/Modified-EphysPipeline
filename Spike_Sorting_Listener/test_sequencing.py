@@ -45,11 +45,11 @@ def test_splitter_first_sorters_wait():
                 self.job_name = job_name
                 self.config = config
                 job_creation_log.append(f"INIT: {job_name}")
-                print(f"📝 Job initialized: {job_name}")
+                print(f"Job initialized: {job_name}")
             
             def create_job(self):
                 job_creation_log.append(f"CREATE: {self.job_name}")
-                print(f"🚀 Job created: {self.job_name}")
+                print(f"Job created: {self.job_name}")
                 return 0  # Success
                 
             def check_job_exist(self):
@@ -79,12 +79,12 @@ def test_splitter_first_sorters_wait():
             print(f"Jobs created: {created_jobs}")
             assert len(created_jobs) == 1, f"Expected 1 job, got {len(created_jobs)}"
             assert "split" in created_jobs[0], f"Expected splitter job, got {created_jobs[0]}"
-            print("✅ Only splitter job created initially")
+            print("Only splitter job created initially")
             
             # Verify watcher thread was started
             mock_thread.assert_called_once()
             mock_thread_instance.start.assert_called_once()
-            print("✅ Watcher thread started")
+            print("Watcher thread started")
         
         # Test Case 2: Watcher waits for splitter success before launching sorters
         print("\n=== Test Case 2: Watcher Behavior ===")
@@ -104,14 +104,14 @@ def test_splitter_first_sorters_wait():
                 mock_status.succeeded = 0
                 mock_status.failed = 0
                 mock_status.active = 1
-                print(f"📊 Status check {api_call_count}: Job still running...")
+                print(f"Status check {api_call_count}: Job still running...")
                 return mock_status
             else:
                 # Third call: job succeeded
                 mock_status.succeeded = 1
                 mock_status.failed = 0
                 mock_status.active = 0
-                print(f"📊 Status check {api_call_count}: Job succeeded!")
+                print(f"Status check {api_call_count}: Job succeeded!")
                 return mock_status
         
         with patch('splitter_fanout.Kube', MockKube), \
@@ -136,8 +136,8 @@ def test_splitter_first_sorters_wait():
             for job_log in created_jobs:
                 assert "well" in job_log, f"Expected well job, got {job_log}"
             
-            print("✅ All 6 sorter jobs created after splitter success")
-            print("✅ No sorter jobs created before splitter completion")
+            print("All 6 sorter jobs created after splitter success")
+            print("No sorter jobs created before splitter completion")
         
         # Test Case 3: Verify sorters NOT created if splitter fails
         print("\n=== Test Case 3: No Sorters on Splitter Failure ===")
@@ -149,7 +149,7 @@ def test_splitter_first_sorters_wait():
             mock_status.succeeded = 0
             mock_status.failed = 2  # Failed job
             mock_status.active = 0
-            print("📊 Status check: Job failed!")
+            print("Status check: Job failed!")
             return mock_status
         
         with patch('splitter_fanout.Kube', MockKube), \
@@ -167,7 +167,7 @@ def test_splitter_first_sorters_wait():
             created_jobs = [log for log in job_creation_log if log.startswith("CREATE:")]
             print(f"Jobs created after splitter failure: {created_jobs}")
             assert len(created_jobs) == 0, f"Expected 0 jobs on failure, got {len(created_jobs)}"
-            print("✅ No sorter jobs created when splitter fails")
+            print("No sorter jobs created when splitter fails")
 
 def main():
     """Run all sequencing tests."""
@@ -178,18 +178,18 @@ def main():
         test_splitter_first_sorters_wait()
         
         print("\n" + "=" * 60)
-        print("✅ ALL SEQUENCING TESTS PASSED!")
+        print("ALL SEQUENCING TESTS PASSED!")
         print("\nVerified Behavior:")
-        print("  1. ✅ Only splitter job created initially")
-        print("  2. ✅ Watcher thread monitors splitter status")  
-        print("  3. ✅ Sorter jobs ONLY created AFTER splitter succeeds")
-        print("  4. ✅ No sorter jobs created if splitter fails")
-        print("  5. ✅ All 6 sorter jobs created on splitter success")
-        print("\n🎯 SEQUENCING IS CORRECT: Splitter → Wait → Sorters")
+        print("  1. Only splitter job created initially")
+        print("  2. Watcher thread monitors splitter status")  
+        print("  3. Sorter jobs ONLY created AFTER splitter succeeds")
+        print("  4. No sorter jobs created if splitter fails")
+        print("  5. All 6 sorter jobs created on splitter success")
+        print("\nSEQUENCING IS CORRECT: Splitter → Wait → Sorters")
         print("=" * 60)
         
     except Exception as e:
-        print(f"\n❌ SEQUENCING TEST FAILED: {e}")
+        print(f"\nSEQUENCING TEST FAILED: {e}")
         import traceback
         traceback.print_exc()
         return 1

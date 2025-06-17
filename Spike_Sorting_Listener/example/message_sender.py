@@ -5,6 +5,7 @@ import argparse
 import braingeneers.utils.s3wrangler as wr
 import os
 import time
+from pathlib import Path
 
 TOPIC = "experiments/upload"
 INTER_BUCKET = "original/data/"
@@ -22,24 +23,27 @@ def create_message(uuid, exp_list, ow=False):
         uuid = uuid[:-1]
     message = {
         "uuid": uuid,
-        "stitch": "False",
+        "stitch": "False", 
         "overwrite": ow,
         "ephys_experiments": {},
         "output": f"s3://braingeneers/{uuid}/derived/stitch/result_phy.zip"
     }
     experiments = {}
     for exp in exp_list:
-        exp_dataset = exp.split(INTER_BUCKET)[1]
-        exp_name = exp_dataset.split(".")[0]
-        # if exp_dataset.endswith(".raw.h5"):
-        #     exp_name = exp_dataset.split(".raw.h5")[0]
-        # elif exp_dataset.endswith(".h5"):
-        #     exp_name = exp_dataset.split(".h5")[0]
-        # elif exp_dataset.endswith(".nwb"):
-        #     exp_name = exp_dataset.split(".nwb")[0]
-        # else:
-        #     exp_name = exp_dataset
-        experiments[exp_name] = {"blocks": [{"path": f"{INTER_BUCKET}{exp_dataset}"}]}
+        # exp_dataset = exp.split(INTER_BUCKET)[1]
+        exp_dataset = Path(exp).name 
+        # exp_name = exp_dataset.split(".")[0]
+        if exp_dataset.endswith(".raw.h5"):
+            exp_name = exp_dataset.split(".raw.h5")[0]
+        elif exp_dataset.endswith(".h5"):
+            exp_name = exp_dataset.split(".h5")[0]
+        elif exp_dataset.endswith(".nwb"):
+            exp_name = exp_dataset.split(".nwb")[0]
+        else:
+            exp_name = exp_dataset
+        experiments[exp_name] = {"blocks": 
+                                 [{"path": f"{INTER_BUCKET}{exp_dataset}"}],
+                                 "data_format": "maxtwo"}
         
     message["ephys_experiments"] = experiments
     print(message)

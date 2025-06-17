@@ -8,8 +8,8 @@ spec:
     spec:
       containers:
         - name: container
-          # image: surygeng/ephys_pipeline:v0.2
-          image: quay.io/ucsc_cgl/sury-ephys_pipeline:v0.1
+          image: surygeng/ephys_pipeline:v0.1
+          # image: quay.io/ucsc_cgl/sury-ephys_pipeline:v0.1
           imagePullPolicy: Always
           resources:
             requests:

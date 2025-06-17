@@ -1,0 +1,41 @@
+2025-06-16 16:19:30,285 Note: NumExpr detected 12 cores but "NUMEXPR_MAX_THREADS" not set, so enforcing safe limit of 8.
+2025-06-16 16:19:30,285 NumExpr defaulting to 8 threads.
+2025-06-16 16:19:30,641 Found credentials in shared credentials file: ~/.aws/credentials
+2025-06-16 16:19:30,693 Found credentials in shared credentials file: ~/.aws/credentials
+2025-06-16 16:54:00,724 Subscribed to services/csv_job
+2025-06-16 16:54:00,725 Listening to messages...
+2025-06-16 16:54:00,725 Subscribed to experiments/upload
+2025-06-16 16:54:00,725 Listening to messages...
+2025-06-16 16:54:00,725 Subscribed to telemetry/+/log/experiments/upload
+2025-06-16 16:54:00,725 Listening to messages...
+2025-06-16 16:54:00,726 MQTT connected: client:<paho.mqtt.client.Client object at 0x7203ad133cd0> userdata:None flags:{'session present': 0} rc:0
+2025-06-16 16:54:00,726 Re-subscribing to topic: services/csv_job
+2025-06-16 16:54:00,726 Re-subscribing to topic: experiments/upload
+2025-06-16 16:54:00,726 Re-subscribing to topic: telemetry/+/log/experiments/upload
+2025-06-17 13:30:09,212 Subscribed to services/csv_job
+2025-06-17 13:30:09,212 Listening to messages...
+2025-06-17 13:30:09,213 Subscribed to experiments/upload
+2025-06-17 13:30:09,213 Listening to messages...
+2025-06-17 13:30:09,213 Subscribed to telemetry/+/log/experiments/upload
+2025-06-17 13:30:09,213 Listening to messages...
+2025-06-17 13:30:09,213 MQTT connected: client:<paho.mqtt.client.Client object at 0x7b7a9a33c550> userdata:None flags:{'session present': 0} rc:0
+2025-06-17 13:30:09,213 Re-subscribing to topic: services/csv_job
+2025-06-17 13:30:09,213 Re-subscribing to topic: experiments/upload
+2025-06-17 13:30:09,213 Re-subscribing to topic: telemetry/+/log/experiments/upload
+2025-06-17 13:30:28,411 Received message from topic: experiments/upload
+2025-06-17 13:30:28,412 Getting experiments from s3://braingeneers/ephys/2025-06-07-e-MaxTwo_D55_KOLF2.2J_SmitsMidbrain_6OHDA_T2_24hr
+2025-06-17 13:30:28,413 stitch is False, loop over experiments...
+2025-06-17 13:30:28,413 Experiment: M06359_D55_KOLFMO_672025_T2_24hr_connected
+2025-06-17 13:30:28,414 Data path: original/data/M06359_D55_KOLFMO_672025_T2_24hr_connected.raw.h5
+2025-06-17 13:30:28,414 Data format: maxtwo
+2025-06-17 13:30:28,414 Result path: s3://braingeneers/ephys/2025-06-07-e-MaxTwo_D55_KOLF2.2J_SmitsMidbrain_6OHDA_T2_24hr/derived/kilosort2/M06359_D55_KOLFMO_672025_T2_24hr_connected_phy.zip
+2025-06-17 13:30:28,415 Detected MaxTwo recording: M06359_D55_KOLFMO_672025_T2_24hr_connected
+2025-06-17 13:30:28,415 Overwrite flag set to True
+2025-06-17 13:30:28,415 Getting splitter configuration...
+2025-06-17 13:30:28,415 Created splitter config: {'args': './start_splitter.sh', 'cpu_request': 8, 'memory_request': 64, 'disk_request': 400, 'GPU': 0, 'image': 'surygeng/maxtwo_splitter:v0.1'}
+2025-06-17 13:30:28,415 Splitter config loaded: {'args': './start_splitter.sh', 'cpu_request': 8, 'memory_request': 64, 'disk_request': 400, 'GPU': 0, 'image': 'surygeng/maxtwo_splitter:v0.1'}
+2025-06-17 13:30:28,416 Getting sorter template...
+2025-06-17 13:30:28,416 sorting_job_info.json not found in current directory
+2025-06-17 13:30:28,416 Error loading sorter template: sorting_job_info.json is required but not found - sorter jobs cannot run without proper configuration
+2025-06-17 13:30:28,417 Error with experiments, sorting_job_info.json is required but not found - sorter jobs cannot run without proper configuration
+2025-06-17 13:30:28,604 smart_open.s3.MultipartWriter('braingeneers', 'services/mqtt_job_listener/listener.log'): uploading part_num: 1, 3458 bytes (total 0.000GB)

@@ -177,6 +177,33 @@ def convert_time(timestamp, timezone = "US/Pacific"):
     return ts_str
 
 
+def get_pod_completion_time(pod):
+    """
+    Safely extract the completion time from pod conditions.
+    Searches for the most recent transition time from appropriate condition types.
+    
+    Returns:
+        str: Formatted time string or "Unknown" if no completion time found
+    """
+    if pod.status.conditions is None or len(pod.status.conditions) == 0:
+        return "Unknown"
+    
+    # Look for the most recent transition time from any condition
+    # This is more robust than hardcoded index access
+    latest_timestamp = None
+    
+    # Iterate through all conditions and find the latest transition time
+    for condition in pod.status.conditions:
+        if condition.last_transition_time:
+            if latest_timestamp is None or condition.last_transition_time > latest_timestamp:
+                latest_timestamp = condition.last_transition_time
+    
+    if latest_timestamp:
+        return convert_time(latest_timestamp)
+    else:
+        return "Unknown"
+
+
 def parse_data_path(pod):
     """
     Parse the container's argument to get data path and parameter file path

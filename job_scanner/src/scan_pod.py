@@ -43,6 +43,32 @@ class edpScanner:
             self.job_lookup = json.load(f)
         print(f"Job lookup table {self.job_lookup}")
 
+    def get_pod_completion_time(self, pod):
+        """
+        Safely extract the completion time from pod conditions.
+        Searches for the most recent transition time from appropriate condition types.
+        
+        Returns:
+            str: Formatted time string or "Unknown" if no completion time found
+        """
+        if pod.status.conditions is None or len(pod.status.conditions) == 0:
+            return "Unknown"
+        
+        # Look for the most recent transition time from any condition
+        # This is more robust than hardcoded index access
+        latest_timestamp = None
+        
+        # Iterate through all conditions and find the latest transition time
+        for condition in pod.status.conditions:
+            if condition.last_transition_time:
+                if latest_timestamp is None or condition.last_transition_time > latest_timestamp:
+                    latest_timestamp = condition.last_transition_time
+        
+        if latest_timestamp:
+            return convert_time(latest_timestamp)
+        else:
+            return "Unknown"
+
     def scan_edp(self):
         config.load_kube_config()
         core_v1 = client.CoreV1Api()
@@ -85,11 +111,7 @@ class edpScanner:
                     if sts in FINISH_FLAGS:
                         start_timestamp = pod.status.start_time  
                         start_ts_str = convert_time(start_timestamp)
-                        if pod.status.conditions is not None:
-                            end_timestamp = pod.status.conditions[1].last_transition_time  
-                            end_ts_str = convert_time(end_timestamp)
-                        else:
-                            end_ts_str = "Unknown"
+                        end_ts_str = self.get_pod_completion_time(pod)
                         self.status_table[pname]["start_time"] = start_ts_str
                         self.status_table[pname]["end_time"] = end_ts_str
                             

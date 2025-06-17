@@ -11,9 +11,10 @@ import re
 import posixpath
 import zipfile
 import json
+from job_utils import JOB_PREFIX, format_job_name
+from splitter_fanout import spawn_splitter_fanout
 
 LOCAL_CSV = "csv/"
-JOB_PREFIX = "edp-"
 TOPIC = ["services/csv_job", "experiments/upload", "telemetry/+/log/experiments/upload"]
 TO_SLACK_TOPIC = "telemetry/slack/TOSLACK/ephys-data-pipeline"
 LOG_FILE_NAME = "listener.log"
@@ -49,14 +50,10 @@ class JobMessage:
         uuid = self.message.get('uuid')
         s3_base = s3_basepath(uuid)
         logging.info(f"Getting experiments from {s3_base}{uuid}")
-        if "stitch" in self.message:
-            stitch = self.message.get('stitch')
-        else:
-            stitch = False
-        if "overwrite" in self.message:
-            overwrite = self.message.get('overwrite')
-        else:
-            overwrite = False
+
+        stitch   = self.message.get("stitch", False)
+        overwrite = self.message.get("overwrite", False)
+
         # Loop over ephys_experiments
         if not stitch or stitch in ["False", "false"]:
             logging.info(f"stitch is {stitch}, loop over experiments...")
@@ -64,9 +61,16 @@ class JobMessage:
                 for exp, exp_data in self.message.get('ephys_experiments').items():
                     # Get the path to the raw data
                     path = exp_data.get('blocks')[0].get('path')
+                    file_path = posixpath.join(s3_base, uuid, path)
+                    
+                    # Get data format (default to 'maxone' if not specified)
+                    fmt = exp_data.get("data_format")
+                    
                     logging.info(f"Experiment: {exp}")
                     logging.info(f"Data path: {path}")
-                    file_path = posixpath.join(s3_base, uuid, path)
+                    logging.info(f"Data format: {fmt}")
+                    
+                    # Determine result path based on path structure
                     if path.startswith("ephys"):
                         chip_id = re.search(r'/[0-9]*/', path).group(0)
                         result_path = posixpath.join(s3_base, uuid, "ephys/derived/kilosort2",
@@ -75,13 +79,70 @@ class JobMessage:
                         result_path = posixpath.join(s3_base, uuid, "derived/kilosort2",
                                                      exp + "_phy.zip")
                     logging.info(f"Result path: {result_path}")
-                    if overwrite:
-                        create_sort(exp, file_path)
-                        logging.info(f"Overwrite sorting result because overwrite is {overwrite}")
-                    elif not check_exist(result_path):
-                        create_sort(exp, file_path)
+                    
+                    # Check if MaxTwo recording that needs splitting
+                    if is_maxtwo_recording(fmt, path):
+                        logging.info(f"Detected MaxTwo recording: {exp}")
+                        
+                        # For MaxTwo, check if ALL 6 well results exist
+                        all_wells_exist = True
+                        missing_wells = []
+                        if not overwrite:
+                            # exp is already the base name without extension
+                            for i in range(6):
+                                well_result_path = result_path.replace(
+                                    f"{exp}_phy.zip", 
+                                    f"{exp}_well{i:03d}_phy.zip"
+                                )
+                                if not check_exist(well_result_path):
+                                    all_wells_exist = False
+                                    missing_wells.append(f"well{i:03d}")
+                        
+                        if overwrite or not all_wells_exist:
+                            if missing_wells:
+                                logging.info(f"Missing results for wells: {', '.join(missing_wells)}")
+                            else:
+                                logging.info(f"Overwrite flag set to {overwrite}")
+                            # Use splitter fanout for MaxTwo recordings
+                            logging.info("Getting splitter configuration...")
+                            try:
+                                splitter_cfg = get_splitter_config()
+                                logging.info(f"Splitter config loaded: {splitter_cfg}")
+                            except Exception as cfg_err:
+                                logging.error(f"Error loading splitter config: {cfg_err}")
+                                raise
+                            
+                            logging.info("Getting sorter template...")
+                            try:
+                                sorter_tpl = get_sorter_template()
+                                logging.info(f"Sorter template loaded (keys): {list(sorter_tpl.keys())}")
+                            except Exception as tpl_err:
+                                logging.error(f"Error loading sorter template: {tpl_err}")
+                                raise
+                            
+                            logging.info(f"Starting MaxTwo splitter fanout for {uuid}, {exp}")
+                            try:
+                                # the exp here should be the complete name including extension
+                                full_exp = path.split("/")[-1]
+                                spawn_splitter_fanout(uuid, full_exp, splitter_cfg, sorter_tpl)
+                                logging.info(f"Successfully started MaxTwo pipeline for {full_exp}")
+                            except Exception as fanout_err:
+                                logging.error(f"Error starting MaxTwo fanout for {full_exp}: {fanout_err}")
+                                raise
+                        else:
+                            logging.info(f"All MaxTwo well results exist. Moving on to next experiment...")
+                    
                     else:
-                        logging.info(f"Sorting result exists. Moving on to next experiment... ")
+                        # Regular single-file processing for all non-MaxTwo recordings
+                        # This handles: maxone, nwb, maxtwo-split, Maxwell, and any other formats
+                        logging.info(f"Processing non-MaxTwo recording with format '{fmt}'")
+                        if overwrite:
+                            create_sort(exp, file_path)
+                            logging.info(f"Overwrite sorting result because overwrite is {overwrite}")
+                        elif not check_exist(result_path):
+                            create_sort(exp, file_path)
+                        else:
+                            logging.info(f"Sorting result exists. Moving on to next experiment...")
                 do_logging(f"Done looping experiments. ", "info")
             except Exception as err:
                 do_logging(f"Error with experiments, {err}", "error")
@@ -213,6 +274,50 @@ def launch_job_csv(csv_file, csv_row):
 
 
 ########################## Utils ##########################
+def is_maxtwo_recording(data_format: str, file_path: str) -> bool:
+    """
+    Determine if this is a MaxTwo recording that needs splitting.
+    
+    Args:
+        data_format: The data format from experiment metadata 
+        file_path: The S3 path to the recording file
+    
+    Returns:
+        True if this is a MaxTwo recording that needs splitting
+    """
+    return (data_format == "maxtwo" and 
+            (file_path.endswith(".raw.h5") or file_path.endswith(".h5")))   
+
+
+def get_splitter_config() -> dict:
+    """Get configuration for MaxTwo splitter job."""
+    config = {
+        "args": "./start_splitter.sh",
+        "cpu_request": 8,
+        "memory_request": 64,
+        "disk_request": 400,
+        "GPU": 0,
+        "image": "surygeng/maxtwo_splitter:v0.1"
+    }
+    logging.info(f"Created splitter config: {config}")
+    return config
+
+
+def get_sorter_template() -> dict:
+    """Get template configuration for Kilosort2 sorter jobs."""
+    try:
+        with open("sorting_job_info.json") as f:
+            template = json.load(f)
+        logging.info(f"Loaded sorter template from sorting_job_info.json")
+        return template
+    except FileNotFoundError:
+        logging.error("sorting_job_info.json not found in current directory")
+        raise FileNotFoundError("sorting_job_info.json is required but not found - sorter jobs cannot run without proper configuration")
+    except Exception as e:
+        logging.error(f"Error loading sorting_job_info.json: {e}")
+        raise
+
+
 def create_kube_job(job_name, job_info):
     global resp
     newJob = Kube(job_name, job_info)
@@ -233,31 +338,6 @@ def create_kube_job(job_name, job_info):
         message_slack(job_name, job_info, message_text="Job created")
         logging.info(f"Job {job_name} created")
     return resp
-
-
-def format_job_name(file_name, job_ind=None, prefix=JOB_PREFIX):
-    if file_name.endswith(".csv") and job_ind is not None:
-        file_name = list(file_name.split('.csv')[0] + "-" + str(job_ind))
-    elif file_name.endswith(".raw.h5"):
-        file_name = list(file_name.split(".raw.h5")[0])
-    elif file_name.endswith(".h5"):
-        file_name = list(file_name.split(".h5")[0])
-
-    if not isinstance(file_name, list):
-        file_name = list(file_name)
-    for i in range(len(file_name)):
-        if file_name[i] in [" ", "_", ".", "/"]:
-            file_name[i] = "-"
-        elif file_name[i].isupper():
-            file_name[i] = file_name[i].lower()
-    np = len(prefix)
-    if len(file_name) >= (63 - np):
-        file_name = file_name[-(63 - np) + 1:]
-        if file_name[0] == '-':
-            file_name[0] = "x"
-    file_name = "".join(file_name)
-    job_name = prefix + file_name
-    return job_name
 
 
 def s3_basepath(UUID):

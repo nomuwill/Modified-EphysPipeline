@@ -72,9 +72,7 @@ def show_jobs_status(n_clicks):
                     start_timestamp = pod.status.start_time
                     start_ts_str = utils.convert_time(start_timestamp)
                 if sts in FINISH_FLAGS:
-                    if pod.status.conditions is not None:
-                        end_timestamp = pod.status.conditions[1].last_transition_time  
-                        end_ts_str = utils.convert_time(end_timestamp)
+                    end_ts_str = utils.get_pod_completion_time(pod)
 
                 job_status_fields.append(
                     dbc.Card([

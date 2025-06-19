@@ -65,8 +65,28 @@ class RunKilosort:
         kilosort_shell = os.path.join(stdln_folder, stdln_script)
         os.chdir(stdln_folder)
         # TODO: check where the kilosort2.log is. This file was not packaged with phy files previously
-        psort = subprocess.Popen(["bash", kilosort_shell, runtime_folder, self.output_folder])
-        # wait until subprocess finish
+        
+        # Start process with pipes to capture output
+        psort = subprocess.Popen(
+            ["bash", kilosort_shell, runtime_folder, self.output_folder],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Combine stderr with stdout
+            universal_newlines=True,
+            bufsize=1  # Line buffered
+        )
+        
+        # Stream output in real-time to both terminal and log
+        while True:
+            output = psort.stdout.readline()
+            if output == '' and psort.poll() is not None:
+                break
+            if output:
+                # Print to terminal (container stdout)
+                print(output.strip())
+                # Also log it with logging module
+                logging.info(f"Kilosort: {output.strip()}")
+        
+        # Wait for process to complete and get return code
         ret = psort.wait()
         return ret
 
@@ -248,4 +268,4 @@ if __name__ == "__main__":
 
     logging.info("All plots are saved.")
 
-    
+

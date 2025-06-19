@@ -9,7 +9,9 @@ RUN apt-get update && apt-get install -y unzip \
     awscli\
     zip\
     time\
-    glances
+    glances\
+    gzip\
+    openssl
 
 RUN mkdir /install_matlab \
     && curl http://ssd.mathworks.com/supportfiles/downloads/R2019b/Release/9/deployment_files/installer/complete/glnxa64/MATLAB_Runtime_R2019b_Update_9_glnxa64.zip > /install_matlab/MATLAB_Runtime_R2019b_Update_9_glnxa64.zip \

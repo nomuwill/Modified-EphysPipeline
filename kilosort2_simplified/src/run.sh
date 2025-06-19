@@ -31,7 +31,7 @@ aws --endpoint $ENDPOINT_URL s3 cp recording.dat s3://braingeneersdev/cache/${DA
 aws --endpoint $ENDPOINT_URL s3 cp temp_wh.dat s3://braingeneersdev/cache/${DATA_NAME}/temp_wh.dat
 rm *.dat
 zip -r ${DATA_NAME}_phy.zip *
-$DEST="${REC_TIME}/derived/kilosort2/${CHIP_ID}${DATA_NAME}_phy.zip"
+DEST="${REC_TIME}/derived/kilosort2/${CHIP_ID}${DATA_NAME}_phy.zip"
 # retry 5 times if the upload fails
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
     aws --endpoint "$ENDPOINT_URL" s3 cp ${DATA_NAME}_phy.zip "$DEST"

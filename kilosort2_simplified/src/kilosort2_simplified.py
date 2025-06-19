@@ -153,6 +153,9 @@ def extract_recording(rec_path, output_folder, format):
     if float(rec.get_sampling_frequency()) < 20000.:
         logging.warning("Sampling frequency is less than 20 kHz, setting the bandpass filter to 300-4600 Hz instead of 300-6000 Hz.")
         band_max = 4600
+    else:
+        logging.warning("Sampling frequency is 20 kHz,using 300-6000 Hz for the bandpass filter.")
+        band_max = 6000
 
     rec_filter = sp.bandpass_filter(rec, freq_min=band_min, freq_max=band_max, dtype="float32")
     binary_file_path = os.path.join(output_folder, 'recording.dat')

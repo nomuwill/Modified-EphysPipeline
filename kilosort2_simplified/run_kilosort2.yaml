@@ -24,7 +24,7 @@ spec:
           command: ["stdbuf", "-i0", "-o0", "-e0", "/usr/bin/time", "-v", "bash", "-c"]
           args:
             - >-
-              ./run.sh s3://braingeneers/ephys/2024-10-31-e-SmitsMidbrain/original/data/24481_SmitsMO_D49_sect300_20241031.raw.h5
+              ./run.sh s3://braingeneers/ephys/2025-05-23-e-MaxTwo_KOLF2.2J_SmitsMidbrain/original/split/M06359_D40_KOLFMO_5232025_well004.raw.h5
           env:
             - name: "PYTHONUNBUFFERED"
               value: "true"
@@ -38,48 +38,48 @@ spec:
               subPath: "credentials"
             - name: ephemeral
               mountPath: "/root"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
-                  - key: kubernetes.io/hostname
-                    operator: In
-                    values:
-                      - gpu-01.nrp.mghpcc.org
-                      - gpu-02.nrp.mghpcc.org
-                      - gpu-03.nrp.mghpcc.org
-                      - gpu-04.nrp.mghpcc.org
-                      - gpu-05.nrp.mghpcc.org
-                      - gpu-06.nrp.mghpcc.org
-                      - gpu-07.nrp.mghpcc.org
-                      - gpu-08.nrp.mghpcc.org
-                      - gpu-09.nrp.mghpcc.org
-                      - gpu-10.nrp.mghpcc.org
-                      - gpu-11.nrp.mghpcc.org
-                      - gpu-12.nrp.mghpcc.org
-                      - gpu-13.nrp.mghpcc.org
-                      - gpu-14.nrp.mghpcc.org
-                      - gpu-15.nrp.mghpcc.org
-                      - gpu-16.nrp.mghpcc.org
-                      - gpu-17.nrp.mghpcc.org
-                      - gpu-18.nrp.mghpcc.org
-                      - hcc-nrp-shor-c5809.unl.edu
-                      - hcc-nrp-shor-c5813.unl.edu
-                      - hcc-nrp-shor-c5817.unl.edu
-                      - hcc-nrp-shor-c5821.unl.edu
-                      - hcc-nrp-shor-c5825.unl.edu
-                      - hcc-nrp-shor-c5905.unl.edu
-                      - hcc-nrp-shor-c5909.unl.edu
-                      - hcc-nrp-shor-c5913.unl.edu
-                      - hcc-nrp-shor-c5917.unl.edu
-                      - hcc-nrp-shor-c5921.unl.edu
-                      - hcc-nrp-shor-c5925.unl.edu
-                      - hcc-nrp-shor-c6009.unl.edu
-                      - hcc-nrp-shor-c6013.unl.edu
-                      - hcc-nrp-shor-c6017.unl.edu
-                      - hcc-nrp-shor-c6021.unl.edu
-                      - hcc-nrp-shor-c6025.unl.edu
+      # affinity:
+      #   nodeAffinity:
+      #     requiredDuringSchedulingIgnoredDuringExecution:
+      #       nodeSelectorTerms:
+      #         - matchExpressions:
+      #             - key: kubernetes.io/hostname
+      #               operator: In
+      #               values:
+      #                 - gpu-01.nrp.mghpcc.org
+      #                 - gpu-02.nrp.mghpcc.org
+      #                 - gpu-03.nrp.mghpcc.org
+      #                 - gpu-04.nrp.mghpcc.org
+      #                 - gpu-05.nrp.mghpcc.org
+      #                 - gpu-06.nrp.mghpcc.org
+      #                 - gpu-07.nrp.mghpcc.org
+      #                 - gpu-08.nrp.mghpcc.org
+      #                 - gpu-09.nrp.mghpcc.org
+      #                 - gpu-10.nrp.mghpcc.org
+      #                 - gpu-11.nrp.mghpcc.org
+      #                 - gpu-12.nrp.mghpcc.org
+      #                 - gpu-13.nrp.mghpcc.org
+      #                 - gpu-14.nrp.mghpcc.org
+      #                 - gpu-15.nrp.mghpcc.org
+      #                 - gpu-16.nrp.mghpcc.org
+      #                 - gpu-17.nrp.mghpcc.org
+      #                 - gpu-18.nrp.mghpcc.org
+      #                 - hcc-nrp-shor-c5809.unl.edu
+      #                 - hcc-nrp-shor-c5813.unl.edu
+      #                 - hcc-nrp-shor-c5817.unl.edu
+      #                 - hcc-nrp-shor-c5821.unl.edu
+      #                 - hcc-nrp-shor-c5825.unl.edu
+      #                 - hcc-nrp-shor-c5905.unl.edu
+      #                 - hcc-nrp-shor-c5909.unl.edu
+      #                 - hcc-nrp-shor-c5913.unl.edu
+      #                 - hcc-nrp-shor-c5917.unl.edu
+      #                 - hcc-nrp-shor-c5921.unl.edu
+      #                 - hcc-nrp-shor-c5925.unl.edu
+      #                 - hcc-nrp-shor-c6009.unl.edu
+      #                 - hcc-nrp-shor-c6013.unl.edu
+      #                 - hcc-nrp-shor-c6017.unl.edu
+      #                 - hcc-nrp-shor-c6021.unl.edu
+      #                 - hcc-nrp-shor-c6025.unl.edu
       restartPolicy: Never
       volumes:
         - name: prp-s3-credentials

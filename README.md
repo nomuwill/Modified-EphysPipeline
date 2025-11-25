@@ -3,7 +3,7 @@
 ## Overview
 EphysPipeline collects the algorithms and services used to run the Braingeneers electrophysiology workflow, from Kubernetes-hosted batch jobs to a full-featured web dashboard. The SpikeCanvas dashboard provides the user-facing entry point for dataset selection, job creation, parameter management, and monitoring across spike sorting, connectivity, and LFP tasks.【F:Services/MaxWell_Dashboard/README.md†L1-L66】
 
-This repository contains the source code and supporting services described in the preprint “Brain-scale neuroscience at exascale: Braingeneers electrophysiology pipeline” (bioRxiv, 2024). Read the paper at https://www.biorxiv.org/content/10.1101/2024.11.14.623530v2.
+This repository contains the source code and supporting services described in the preprint “Multiscale Cloud-Based Pipeline for Neuronal Electrophysiology Analysis and Visualization” (bioRxiv, 2024). Read the paper at https://www.biorxiv.org/content/10.1101/2024.11.14.623530v2.
 
 ## Repository layout
 ### Algorithms

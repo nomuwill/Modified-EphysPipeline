@@ -8,6 +8,7 @@
 # 5. Progress monitoring with ETA calculations
 
 set -euo pipefail
+echo "Running start_splitter.sh v0.37"
 
 ###############################################################################
 # 0. Arguments and optimized retry configuration

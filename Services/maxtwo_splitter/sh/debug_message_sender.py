@@ -56,13 +56,34 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Send electrophysiology debug messages to the message broker."
     )
-    parser.add_argument("--uuid", help="UUID of the experiment to process", required=True)
-    parser.add_argument("--inter-bucket", default=INTER_BUCKET,
-                        help="Intermediate bucket path segment (default: original/data/)")
-    parser.add_argument("--experiments", nargs="*", default=None,
-                        help="List of experiment filenames to process. If omitted, all are processed.")
-    parser.add_argument("--overwrite", type=lambda v: v.lower() in ["y", "yes", "true", "1"],
-                        default=False, help="Whether to overwrite results (y/n)")
+    parser.add_argument(
+        "--uuid",
+        help="UUID of the experiment to process.",
+        required=True,
+    )
+    parser.add_argument(
+        "--inter-bucket",
+        default=INTER_BUCKET,
+        help=(
+            "Intermediate bucket path segment containing the recordings. "
+            f"Defaults to {INTER_BUCKET}."
+        ),
+    )
+    parser.add_argument(
+        "--experiments",
+        nargs="*",
+        default=None,
+        help=(
+            "Space-separated list of experiment filenames to process. "
+            "If omitted, all available experiments in the UUID are processed."
+        ),
+    )
+    parser.add_argument(
+        "--overwrite",
+        type=lambda v: v.lower() in ["y", "yes", "true", "1"],
+        default=False,
+        help="Whether to overwrite existing results (y/n, yes/no, true/false).",
+    )
     return parser.parse_args()
 
 

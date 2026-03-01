@@ -37,10 +37,9 @@ WORK_DIR="${INPUT_DIR}/SpikeSorting_temp"
 echo "Using working directory: ${WORK_DIR}"
 mkdir -p "${WORK_DIR}"
 
-# Copy input file to expected location
+# Copy input file to expected location (as a file, not into a directory)
 echo "Copying input file to ${WORK_DIR}/Trace..."
-mkdir -p "${WORK_DIR}/Trace"
-cp "${INPUT_FILE}" "${WORK_DIR}/Trace/"
+cp "${INPUT_FILE}" "${WORK_DIR}/Trace"
 
 # Run Kilosort2
 echo "Starting Kilosort2 processing..."

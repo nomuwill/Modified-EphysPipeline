@@ -15,16 +15,19 @@ inter_folder = f"{SPIKE_SORTING_BASE}/inter"
 # # Matlab files will have the same name as recording files but will end with _sorted.mat
 # matlab_folder = "/project/SpikeSorting/output"
 
+# Get script directory for relative paths
+_script_dir = os.path.dirname(os.path.abspath(__file__))
+_repo_root = os.path.dirname(_script_dir)  # Parent of src/ is the repo root
 
-# standalone executable absolute path
-stdln_folder = "/project/matlab/"
+# standalone executable absolute path (relative to repo)
+stdln_folder = os.environ.get("KILOSORT_MATLAB_DIR", os.path.join(_repo_root, "matlab"))
 stdln_script = "run_kilosort_compiled.sh"
 # MATLAB runtime directory as required for running the standalone shell script
-runtime_folder = "/usr/local/MATLAB/MATLAB_Runtime/v97"
+runtime_folder = os.environ.get("MATLAB_RUNTIME_DIR", "/usr/local/MATLAB/MATLAB_Runtime/v97")
 
 # Set toolbox paths
-kilosort_path = "/project/matlab"
-hdf5_plugin_path = '/project/src/'
+kilosort_path = stdln_folder
+hdf5_plugin_path = os.environ.get("HDF5_PLUGIN_PATH", _script_dir)
 
 # preprocess parameters
 band_min, band_max = 300, 6000

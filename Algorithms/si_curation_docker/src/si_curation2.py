@@ -685,12 +685,20 @@ def sort_channel_distance(channel_positions, best_channel_position):
 
 
 if __name__ == "__main__":
+
+    '''
+    How to use: 
+        - python3 si_curation2.py <phy.zip location> <raw.h5 location>
+        - 
+    '''
     
     # data_path = sys.argv[1]
     # param_path = sys.argv[2]
     # param_path=None
     # params_file_name = param_path.split("/")[-1].split(".")[0]
 
+    data_path = sys.argv[1]
+    phy_path = sys.argv[2]
     data_path= '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/learning/sampleFiles/24432_10Feb2026/24432_10Feb2026.raw.h5'
     phy_path = '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/learning/sampleFiles/24432_10Feb2026/24432_10Feb2026_phy'
 

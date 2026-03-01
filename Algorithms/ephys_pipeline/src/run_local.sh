@@ -12,10 +12,16 @@ if [ $# -eq 0 ]; then
 fi
 
 INPUT_FILE="$1"
+echo "Looking for file: $INPUT_FILE"
+
 if [ ! -f "$INPUT_FILE" ]; then
     echo "ERROR: File not found: $INPUT_FILE"
+    echo "Current directory: $(pwd)"
+    echo "Please provide the full path to your data file"
     exit 1
 fi
+
+echo "File found!"
 
 # Extract data name and input directory
 DATA_NAME=$(basename "${INPUT_FILE}" | sed -E 's/\.(raw\.)?h5$|\.nwb$//')
@@ -23,8 +29,9 @@ INPUT_DIR=$(dirname "$(realpath "${INPUT_FILE}")")
 echo "Processing: $DATA_NAME"
 echo "Output will be saved to: ${INPUT_DIR}"
 
-# Create local working directory
-WORK_DIR="/project/SpikeSorting"
+# Create local working directory in the same folder as the data
+WORK_DIR="${INPUT_DIR}/SpikeSorting_temp"
+echo "Using working directory: ${WORK_DIR}"
 mkdir -p "${WORK_DIR}"
 
 # Copy input file to expected location
@@ -34,7 +41,7 @@ cp "${INPUT_FILE}" "${WORK_DIR}/Trace/"
 
 # Run Kilosort2
 echo "Starting Kilosort2 processing..."
-cd /project/SpikeSorting
+cd "${WORK_DIR}"
 python kilosort2_simplified.py "$DATA_NAME"
 
 # Check if processing succeeded
@@ -54,6 +61,12 @@ if [ -d "$TEMP_OUTPUT_DIR" ]; then
     mv "${DATA_NAME}_phy.zip" "${INPUT_DIR}/"
 
     echo "Results saved to: ${INPUT_DIR}/${DATA_NAME}_phy.zip"
+
+    # Clean up temporary files
+    echo "Cleaning up temporary files..."
+    cd "${INPUT_DIR}"
+    rm -rf "${WORK_DIR}"
+
     echo "Kilosort2 pipeline completed successfully!"
 else
     echo "ERROR: Expected output folder not found: $TEMP_OUTPUT_DIR"

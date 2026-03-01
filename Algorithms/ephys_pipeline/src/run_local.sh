@@ -39,6 +39,7 @@ mkdir -p "${WORK_DIR}"
 
 # Copy input file to expected location (as a file, not into a directory)
 echo "Copying input file to ${WORK_DIR}/Trace..."
+rm -rf "${WORK_DIR}/Trace"  # Remove if it exists from previous run
 cp "${INPUT_FILE}" "${WORK_DIR}/Trace"
 
 # Run Kilosort2

@@ -293,6 +293,7 @@ def _apply_conservative_kilosort_params(base_params, target_nt):
 
 if __name__ == "__main__":
     output_folder = os.path.join(inter_folder, "sorted/kilosort2")
+    os.makedirs(output_folder, exist_ok=True)
     log = os.path.join(output_folder, "run_kilosort2.log")
     setup_logging(log)
     setup_hdf5()

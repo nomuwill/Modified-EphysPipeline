@@ -1,11 +1,15 @@
 import numpy as np
 import spikeinterface.extractors as se
+import os
+
+# Get base directory from environment variable, default to /project/SpikeSorting
+SPIKE_SORTING_BASE = os.environ.get("SPIKE_SORTING_DIR", "/project/SpikeSorting")
 
 # List of data files you want to spike sort
-rec_file = "/project/SpikeSorting/Trace"
+rec_file = f"{SPIKE_SORTING_BASE}/Trace"
 
 # List of intermediate folders where tmp and output files are saved
-inter_folder = "/project/SpikeSorting/inter"
+inter_folder = f"{SPIKE_SORTING_BASE}/inter"
 
 # # List of output folders where final matlab files are saved.
 # # Matlab files will have the same name as recording files but will end with _sorted.mat

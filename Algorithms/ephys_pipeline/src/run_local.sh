@@ -45,7 +45,7 @@ cp "${INPUT_FILE}" "${WORK_DIR}/Trace/"
 # Run Kilosort2
 echo "Starting Kilosort2 processing..."
 cd "${WORK_DIR}"
-python "${SCRIPT_DIR}/kilosort2_simplified.py" "$DATA_NAME"
+SPIKE_SORTING_DIR="${WORK_DIR}" python "${SCRIPT_DIR}/kilosort2_simplified.py" "$DATA_NAME"
 
 # Check if processing succeeded
 if [ $? -ne 0 ]; then

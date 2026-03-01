@@ -302,8 +302,9 @@ if __name__ == "__main__":
     # get format from metadata
     experiment = sys.argv[1]
     logging.info(f"Start pipeline processing for experiment {experiment}")
-    metadata_path = "/project/SpikeSorting/metadata.json"
-    parameter_path = "/project/SpikeSorting/parameters.json"
+    spike_sorting_base = os.environ.get("SPIKE_SORTING_DIR", "/project/SpikeSorting")
+    metadata_path = f"{spike_sorting_base}/metadata.json"
+    parameter_path = f"{spike_sorting_base}/parameters.json"
     if not os.path.isfile(metadata_path):
         logging.error("Note: metadata.json not available. Data format default to Maxwell.")
         data_format = "Maxwell"

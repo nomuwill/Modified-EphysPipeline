@@ -1,3 +1,4 @@
+#!/Users/noah/miniconda3/envs/brain_stim/bin/python
 '''
 From Sury's pipeline
     - modified to include entire footprint
@@ -190,31 +191,41 @@ class QualityMetrics:
         # <<<<<<<<<
 
         # extract waveforms
-        print("Extracting waveforms...")
+        logging.info("Extracting waveforms...")
         self.we = self.extract_waveforms(max_spikes=max_spikes_waveform)
-        print("Waveforms extracted:", self.we)
+        logging.info(f"Waveforms extracted successfully for {len(self.we.unit_ids)} units")
+
         if default:  # to leave space for other curation methods
+            logging.info("Starting quality metric curation...")
             self.curated_ids, self.all_remove_ids = self.default_curation()
+            logging.info(f"Curation complete. Kept {len(self.curated_ids)} units, removed {len(self.all_remove_ids)} units")
 
         logging.info("Saving cleaned units...")
         self.we_clean = self.we.select_units(self.curated_ids, self.clean_folder)
-        print("Saved ", self.we_clean)
+        logging.info(f"Cleaned units saved: {len(self.we_clean.unit_ids)} units")
 
 
     def default_curation(self):
         all_remove_ids = set()
+
+        logging.info("Computing SNR...")
         ids = self.curate_by_snr
         all_remove_ids.update(ids)
+
+        logging.info("Computing ISI violations...")
         ids = self.curate_by_isi()
         all_remove_ids.update(ids)
+
+        logging.info("Computing firing rates...")
         ids = self.curate_by_fr()
         all_remove_ids.update(ids)
-        # ids = self.curate_by_redundant()  # output the cleaned units and the original/remove list
-        # all_remove_ids.update(ids)
+
+        logging.info("Detecting redundant units...")
         self.redundant_pairs = self.curate_by_redundant()
 
         logging.info(f"Total number of units to remove: {len(all_remove_ids)}")
 
+        logging.info("Removing excess spikes...")
         curated_excess = curation.remove_excess_spikes(self.we.sorting, self.we.recording)
         self.we.sorting = curated_excess
         return curated_excess.unit_ids, list(all_remove_ids)
@@ -238,12 +249,17 @@ class QualityMetrics:
         rec_pre = self.prepare_rec()
         self.extract_path = posixpath.join(self.base_folder, "extract_waveforms")
         if os.path.isdir(self.extract_path):
+            logging.info("Loading existing waveform extraction...")
             we = sc.WaveformExtractor.load(folder=self.extract_path)
         else:
             we = sc.WaveformExtractor(rec_pre, self.phy_result, self.base_folder, allow_unfiltered=False)
             we.set_params(ms_before=ms_before, ms_after=ms_after, max_spikes_per_unit=max_spikes)
             we.run_extract_waveforms(**JOB_KWARGS)
-            we.save(self.extract_path, overwrite=True)
+            try:
+                we.save(self.extract_path, overwrite=True)
+            except OSError as e:
+                logging.warning(f"Failed to save waveforms to disk: {e}")
+                logging.info("Continuing with in-memory waveforms (not persisted)")
         return we
 
     def compute_noise_level(self):
@@ -697,10 +713,10 @@ if __name__ == "__main__":
     # param_path=None
     # params_file_name = param_path.split("/")[-1].split(".")[0]
 
-    data_path = sys.argv[1]
-    phy_path = sys.argv[2]
-    data_path= '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/learning/sampleFiles/24432_10Feb2026/24432_10Feb2026.raw.h5'
-    phy_path = '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/learning/sampleFiles/24432_10Feb2026/24432_10Feb2026_phy'
+    # data_path = sys.argv[1]
+    # phy_path = sys.argv[2]
+    data_path= '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/data/constraint_sample_small/24432_10Feb2026.raw.h5'
+    phy_path = '/Users/noah/Desktop/sharf_lab/sharflab_code/noacode/data/constraint_sample_small/24432_10Feb2026_phy'
 
     setup_hdf5()
  
@@ -713,9 +729,13 @@ if __name__ == "__main__":
 
     # download file from s3
     # current_folder = os.getcwd()
-    current_folder = "/tmp"   # to make sure the volumn mount works
-    subfolder = "/data"
-    base_folder = current_folder + subfolder
+    # current_folder = "/tmp"   # to make sure the volumn mount works
+    # subfolder = "/data"
+    # base_folder = current_folder + subfolder
+
+    # Use local project directory instead of /tmp
+    current_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    base_folder = os.path.join(current_folder, "temp_processing")
 
     if not os.path.isdir(base_folder):
         os.mkdir(base_folder)
@@ -802,10 +822,9 @@ if __name__ == "__main__":
     # wr.download(data_path, posixpath.join(base_folder, experiment))
     # logging.info("Done")
 
-    # Copy local raw data instead of downloading
-    logging.info("Copying local raw data...")
-    local_data_path = posixpath.join(base_folder, experiment + ".raw.h5")
-    shutil.copy(data_path, local_data_path)
+    # Use local raw data directly instead of copying (avoids corruption of large files)
+    logging.info("Using local raw data directly (no copy)...")
+    local_data_path = data_path  # Use original file path directly
     logging.info("Done!")
 
     # >>>>>>>>>>>>
@@ -837,12 +856,16 @@ if __name__ == "__main__":
     for folder in cleanup_folders:
         if os.path.exists(folder):
             logging.info(f"Removing old temporary folder: {folder}")
-            shutil.rmtree(folder)
+            try:
+                shutil.rmtree(folder)
+            except OSError as e:
+                logging.warning(f"Could not remove {folder}: {e}. Trying with ignore_errors...")
+                shutil.rmtree(folder, ignore_errors=True)
 
 
     # do curation
-    # rec_name should match the copied file name
-    rec_name = experiment + ".raw.h5"
+    # rec_name should be the full path to the data file (we're using original, not copied)
+    rec_name = local_data_path
     curation = QualityMetrics(base_folder=base_folder,
                               rec_name=rec_name,
                               phy_folder=extract_dir,

@@ -46,6 +46,7 @@ kilosort_params = {
     'ntbuff': 64,
     'nfilt_factor': 4,
     'NT': 65600,
+    'nblocks': 1,                   # Specify no drift correction
     'keep_good_only': False,
     'total_memory': "2G",
     'n_jobs_bin': 64,

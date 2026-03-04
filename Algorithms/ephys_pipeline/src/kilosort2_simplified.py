@@ -414,23 +414,23 @@ if __name__ == "__main__":
     # upload the qm_file in run.sh
 
     # plot some figures (plotly)
-    # save the figure and upload
-    figure_folder = os.path.join(inter_folder, "sorted/figure")  
-    if not os.path.isdir(figure_folder):
-        os.makedirs(figure_folder)
+    # # save the figure and upload
+    # figure_folder = os.path.join(inter_folder, "sorted/figure")  
+    # if not os.path.isdir(figure_folder):
+    #     os.makedirs(figure_folder)
     
-    # map, map with sttc; raster; individual spike footprints; stats for fr, isi, sttc; raster with burst, stats for burst
-    pe = plots.PlotlyEphys(spike_data_new, bin_size=0.05, win=5, avg=False, win_tiling=0.02,
-                           gaussian=True, sigma=5, burst_rms_thr=3, title=experiment, save_to=figure_folder)
-    overview_figure = pe.plot_html_page()
-    overview_figure.write_html(f"{figure_folder}/{experiment}_overview.html")
-    ## also save the output parameter so later I can add/delete things on the figure
-    overview_figure.write_json(f"{figure_folder}/{experiment}_overview.json")
-    ## save individual figures as well (for each unit)
-    sua_folder = os.path.join(figure_folder, "sua")
-    if not os.path.isdir(sua_folder):
-        os.makedirs(sua_folder)
-    psua = plots_sua.PlotSUA(spike_data_new, title=experiment, save_to=sua_folder)
-    psua.plot_sua()
+    # # map, map with sttc; raster; individual spike footprints; stats for fr, isi, sttc; raster with burst, stats for burst
+    # pe = plots.PlotlyEphys(spike_data_new, bin_size=0.05, win=5, avg=False, win_tiling=0.02,
+    #                        gaussian=True, sigma=5, burst_rms_thr=3, title=experiment, save_to=figure_folder)
+    # overview_figure = pe.plot_html_page()
+    # overview_figure.write_html(f"{figure_folder}/{experiment}_overview.html")
+    # ## also save the output parameter so later I can add/delete things on the figure
+    # overview_figure.write_json(f"{figure_folder}/{experiment}_overview.json")
+    # ## save individual figures as well (for each unit)
+    # sua_folder = os.path.join(figure_folder, "sua")
+    # if not os.path.isdir(sua_folder):
+    #     os.makedirs(sua_folder)
+    # psua = plots_sua.PlotSUA(spike_data_new, title=experiment, save_to=sua_folder)
+    # psua.plot_sua()
 
-    logging.info("All plots are saved.")
+    # logging.info("All plots are saved.")
